@@ -3,3 +3,4 @@ numpy
 yfinance
 python-dotenv
 requests
+pandas_datareader
