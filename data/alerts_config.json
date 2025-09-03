@@ -5,7 +5,7 @@
   },
   "venus": {
     "active": ["MSFT","AMZN","ASML","LLY","NVO","BEP","VUSA.DE"],
-    "inactive": ["NVDA","PLTR","LMT","ADS.DE","SRT.DE","WOLF","VUSD.DE","IE00B4L5Y983","IE00B66F4759"]
+    "inactive": ["NVDA","PLTR","LMT","NFLX","DTG.DE","JKS","ADS.DE","SRT.DE","WOLF","VUSD.DE","IE00B4L5Y983","IE00B66F4759"]
   },
   "notgroschen": {
     "active": ["FT ICAV-FTSE CHN ETF DLA","V.S+P500 U.ETF DLA"]
