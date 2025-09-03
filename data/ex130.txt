@@ -1,0 +1,203 @@
+# ==== MEGACAPS / CORE ====
+MSFT
+AAPL
+AMZN
+GOOGL
+META
+NVDA
+AVGO
+TSM
+ASML
+BRK.B
+COST
+LIN
+SAP
+JPM
+V
+MA
+
+# ==== SEMIS / AI-INFRA ====
+AMD
+INTC
+MU
+ADI
+TXN
+NXPI
+QCOM
+ON
+MCHP
+MPWR
+SMCI
+ARM
+
+# ==== CLOUD / SAAS / DATA ====
+SNOW
+DDOG
+CRM
+NOW
+MDB
+TEAM
+ORCL
+ADBE
+ZS
+NET
+OKTA
+S
+PSTG
+HCP  # HashiCorp (falls gelistet als HCP)
+
+# ==== CYBERSEC ====
+PANW
+CRWD
+FTNT
+S
+TENB
+
+# ==== E-COM / PLATFORM ====
+SHOP
+MELI
+PDD
+BABA
+JD
+CPNG
+ETSY
+SE
+
+# ==== CONSUMER STAPLES / BRANDS ====
+PEP
+KO
+PG
+MCD
+SBUX
+WMT
+UL
+NKE
+LULU
+
+# ==== HEALTHCARE / DEVICES / BIO ====
+LLY
+NVO
+MRK
+PFE
+BMY
+TMO
+DHR
+ISRG
+SYK
+ZBH
+REGN
+VRTX
+
+# ==== INDUSTRIALS / POWER / DEFENSE ====
+CAT
+DE
+GE
+HON
+LMT
+RTX
+NOC
+BA
+VRT
+EMR
+ETN
+PH
+ROK
+SU.PA      # Schneider Electric
+SIE.DE     # Siemens
+AIR.PA     # Airbus
+
+# ==== ENERGY / RENEWABLES ====
+XOM
+CVX
+COP
+SLB
+HAL
+SHEL
+BP
+BEP
+NEP
+FSLR
+ENPH
+SEDG
+
+# ==== BANKS / FINTECH / PAYMENTS ====
+JPM
+BAC
+MS
+GS
+C
+AXP
+PYPL
+SQ
+INTU
+
+# ==== TRANSPORT / AUTO ====
+UPS
+FDX
+TM
+HMC
+RIVN
+TSLA
+GM
+F
+
+# ==== MATERIALS / CHEMICALS ====
+LIN
+APD
+ECL
+NUE
+FCX
+AA
+MLM
+VMC
+
+# ==== EUROPE BLUE-CHIPS ====
+NESN.SW    # Nestlé
+ADYEN.AS
+MC.PA      # LVMH
+OR.PA      # L’Oreal
+ADS.DE     # Adidas
+SRT.DE     # Sartorius
+ASRNL.AS   # ASR Nederland
+HEI.DE     # Heidelberg Materials
+BAS.DE     # BASF
+RNO.PA     # Renault
+
+# ==== CHINA / ADR RADAR ====
+BIDU
+NTES
+TCEHY
+PDD
+BABA
+JD
+
+# ==== TELECOM OPTIONAL ====
+T
+VZ
+
+# ==== ALREADY IN MARS/VENUS (zur Sicherheit) ====
+TSMC
+ASML
+ARM
+MPWR
+SNOW
+DDOG
+CRWD
+SHOP
+SE
+CPNG
+ENVX
+VRT
+SU.PA
+PLTR
+WOLF
+LMT
+ADS.DE
+SRT.DE
+
+# ==== ETFs & SATELLITES (Radar) ====
+VUSA.DE
+VUSD.DE
+IE00B4L5Y983
+IE00B66F4759
+ASHR
