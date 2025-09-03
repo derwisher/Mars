@@ -19,7 +19,7 @@ def main(max_n=5000):
     ticks = set(mars.get("active",[]) + mars.get("inactive",[]) +
                 venus.get("active",[]) + venus.get("inactive",[]))
 
-    # # Seeds & Radarlisten (NEU: ex130.txt)
+    # Seeds & Radarlisten (NEU: ex130.txt)
     for fname in ["universe_core.txt","universe_watch.txt","universe_all.txt","extended_universe.txt, "ex130.txt"    # <--- Ex-130 wird automatisch gemerged"]:
         ticks.update(read_lines(DATA/fname))
 
