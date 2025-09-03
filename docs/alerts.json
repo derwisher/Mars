@@ -1,0 +1,139 @@
+{
+  "as_of": "2025-09-03T14:03:34Z",
+  "universe": [
+    "GOOGL",
+    "DDOG",
+    "MSFT",
+    "CPNG",
+    "ARM",
+    "ENVX",
+    "SHOP",
+    "SNOW",
+    "AMZN",
+    "NVDA",
+    "SE",
+    "MPWR",
+    "TSM"
+  ],
+  "dca": {
+    "Mars": [
+      {
+        "ticker": "AMZN",
+        "active": true
+      },
+      {
+        "ticker": "ARM",
+        "active": true
+      },
+      {
+        "ticker": "CPNG",
+        "active": true
+      },
+      {
+        "ticker": "DDOG",
+        "active": true
+      },
+      {
+        "ticker": "ENVX",
+        "active": true
+      },
+      {
+        "ticker": "GOOGL",
+        "active": true
+      },
+      {
+        "ticker": "MPWR",
+        "active": true
+      },
+      {
+        "ticker": "MSFT",
+        "active": true
+      },
+      {
+        "ticker": "NVDA",
+        "active": true
+      },
+      {
+        "ticker": "SE",
+        "active": true
+      },
+      {
+        "ticker": "SHOP",
+        "active": true
+      },
+      {
+        "ticker": "SNOW",
+        "active": true
+      },
+      {
+        "ticker": "TSM",
+        "active": true
+      }
+    ]
+  },
+  "scores_top15": [
+    {
+      "ticker": "MPWR",
+      "score": 0.6063
+    },
+    {
+      "ticker": "SNOW",
+      "score": 0.5709
+    },
+    {
+      "ticker": "DDOG",
+      "score": 0.5578
+    },
+    {
+      "ticker": "GOOGL",
+      "score": 0.5508
+    },
+    {
+      "ticker": "TSM",
+      "score": 0.5448
+    },
+    {
+      "ticker": "CPNG",
+      "score": 0.4748
+    },
+    {
+      "ticker": "NVDA",
+      "score": 0.4548
+    },
+    {
+      "ticker": "MSFT",
+      "score": 0.4423
+    },
+    {
+      "ticker": "AMZN",
+      "score": 0.3591
+    },
+    {
+      "ticker": "SE",
+      "score": 0.355
+    },
+    {
+      "ticker": "SHOP",
+      "score": 0.2839
+    },
+    {
+      "ticker": "ENVX",
+      "score": 0.2278
+    },
+    {
+      "ticker": "ARM",
+      "score": 0.1586
+    }
+  ],
+  "risk": {
+    "var_1d_95": {
+      "Mars": 0.036447
+    }
+  },
+  "alerts_today": [
+    {
+      "ticker": "GOOGL",
+      "type": "momentum_breakout"
+    }
+  ]
+}
