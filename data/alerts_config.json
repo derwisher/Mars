@@ -1,0 +1,12 @@
+{
+  "default": { "breakout_move_vol": 1.0, "breakout_move_novol": 2.0, "trim_stretch": 8.0, "trim_rsi": 72, "drawdown20": 8.0 },
+  "books": {
+    "Mars":  { "breakout_move_vol": 0.8, "breakout_move_novol": 1.8, "trim_stretch": 8.0, "trim_rsi": 72, "drawdown20": 8.0 },
+    "Venus": { "breakout_move_vol": 1.2, "breakout_move_novol": 2.2, "trim_stretch": 9.0, "trim_rsi": 74, "drawdown20": 6.0 }
+  },
+  "tickers": {
+    "NVDA": { "breakout_move_vol": 1.0, "breakout_move_novol": 2.0, "trim_stretch": 9.0, "trim_rsi": 72 },
+    "MSFT": { "breakout_move_vol": 0.8, "breakout_move_novol": 1.6, "trim_stretch": 7.0,  "trim_rsi": 70 },
+    "GOOGL":{ "breakout_move_vol": 0.8, "breakout_move_novol": 1.6, "trim_stretch": 7.0,  "trim_rsi": 70 }
+  }
+}
