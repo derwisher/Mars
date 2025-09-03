@@ -1,0 +1,44 @@
+# ===== MARS =====
+MSFT
+GOOGL
+AMZN
+TSMC
+DDOG
+SNOW
+ARM
+MPWR
+SHOP
+SE
+CRWD       # CrowdStrike
+SCHN       # Schneider Electric
+VRT        # Vertiv (neu aufgenommen)
+CPNG
+ENVX
+CFLT       # Confluent (bereits Position)
+
+# ===== VENUS =====
+MSFT
+AMZN
+ASML
+LLY
+NVO
+BEP        # Brookfield Renewables
+VUSA.DE    # Vanguard S&P 500 Accumulating
+
+# Inaktiv, aber im Depot
+NVDA
+PLTR
+LMT
+ADS.DE     # Adidas
+SRT.DE     # Sartorius
+WOLF       # Wolfspeed
+VUSD.DE    # Vanguard S&P 500 Distributing
+IE00B4L5Y983   # iShares Core MSCI World Dist
+IE00B66F4759   # iShares S&P SmallCap 600
+
+# ===== BOOSTER / CANDIDATES =====
+MDB        # MongoDB
+PANW       # Palo Alto
+NET        # Cloudflare
+ZS         # Zscaler
+ENPH       # Enphase
