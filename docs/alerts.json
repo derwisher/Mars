@@ -1,134 +1,48 @@
 {
-  "as_of": "2025-09-03T17:33:00Z",
+  "as_of": "2025-09-03T21:20:00Z",
   "universe": [
-    "GOOGL",
-    "DDOG",
-    "MSFT",
-    "CPNG",
-    "ARM",
-    "ENVX",
-    "SHOP",
-    "SNOW",
-    "AMZN",
-    "NVDA",
-    "SE",
-    "MPWR",
-    "TSM"
+    "MSFT", "GOOGL", "AMZN", "TSMC", "DDOG", "SNOW", "ARM", "MPWR",
+    "SHOP", "SE", "CRWD", "SCHN", "VRT", "CPNG", "ENVX", "CFLT",
+    "ASML", "LLY", "NVO", "BEP", "VUSA.DE",
+    "NVDA", "PLTR", "LMT", "ADS.DE", "SRT.DE", "WOLF", "VUSD.DE",
+    "IE00B4L5Y983", "IE00B66F4759", "ASHR"
   ],
   "dca": {
     "Mars": [
-      {
-        "ticker": "AMZN",
-        "active": true
-      },
-      {
-        "ticker": "ARM",
-        "active": true
-      },
-      {
-        "ticker": "CPNG",
-        "active": true
-      },
-      {
-        "ticker": "DDOG",
-        "active": true
-      },
-      {
-        "ticker": "ENVX",
-        "active": true
-      },
-      {
-        "ticker": "GOOGL",
-        "active": true
-      },
-      {
-        "ticker": "MPWR",
-        "active": true
-      },
-      {
-        "ticker": "MSFT",
-        "active": true
-      },
-      {
-        "ticker": "NVDA",
-        "active": true
-      },
-      {
-        "ticker": "SE",
-        "active": true
-      },
-      {
-        "ticker": "SHOP",
-        "active": true
-      },
-      {
-        "ticker": "SNOW",
-        "active": true
-      },
-      {
-        "ticker": "TSM",
-        "active": true
-      }
+      { "ticker": "MSFT", "active": true },
+      { "ticker": "GOOGL", "active": true },
+      { "ticker": "AMZN", "active": true },
+      { "ticker": "TSMC", "active": true },
+      { "ticker": "DDOG", "active": true },
+      { "ticker": "SNOW", "active": true },
+      { "ticker": "ARM", "active": true },
+      { "ticker": "MPWR", "active": true },
+      { "ticker": "SHOP", "active": true },
+      { "ticker": "SE", "active": true },
+      { "ticker": "CRWD", "active": true },
+      { "ticker": "SCHN", "active": true },
+      { "ticker": "VRT", "active": true },
+      { "ticker": "CPNG", "active": true },
+      { "ticker": "ENVX", "active": true },
+      { "ticker": "CFLT", "active": true }
+    ],
+    "Venus": [
+      { "ticker": "MSFT", "active": true },
+      { "ticker": "AMZN", "active": true },
+      { "ticker": "ASML", "active": true },
+      { "ticker": "LLY", "active": true },
+      { "ticker": "NVO", "active": true },
+      { "ticker": "BEP", "active": true },
+      { "ticker": "VUSA.DE", "active": true }
     ]
   },
-  "scores_top15": [
-    {
-      "ticker": "MPWR",
-      "score": 0.6615
-    },
-    {
-      "ticker": "SNOW",
-      "score": 0.6351
-    },
-    {
-      "ticker": "TSM",
-      "score": 0.5974
-    },
-    {
-      "ticker": "DDOG",
-      "score": 0.5961
-    },
-    {
-      "ticker": "GOOGL",
-      "score": 0.5358
-    },
-    {
-      "ticker": "NVDA",
-      "score": 0.5097
-    },
-    {
-      "ticker": "CPNG",
-      "score": 0.5029
-    },
-    {
-      "ticker": "MSFT",
-      "score": 0.4757
-    },
-    {
-      "ticker": "SE",
-      "score": 0.4421
-    },
-    {
-      "ticker": "AMZN",
-      "score": 0.3922
-    },
-    {
-      "ticker": "SHOP",
-      "score": 0.3585
-    },
-    {
-      "ticker": "ENVX",
-      "score": 0.2231
-    },
-    {
-      "ticker": "ARM",
-      "score": 0.1748
-    }
-  ],
-  "risk": {
-    "var_1d_95": {
-      "Mars": 0.036447
-    }
-  },
-  "alerts_today": []
+  "inactive": {
+    "Mars": [
+      "NVDA"
+    ],
+    "Venus": [
+      "NVDA", "PLTR", "LMT", "ADS.DE", "SRT.DE", "WOLF",
+      "VUSD.DE", "IE00B4L5Y983", "IE00B66F4759"
+    ]
+  }
 }
