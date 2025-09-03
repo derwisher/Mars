@@ -1,0 +1,28 @@
+{
+  "mars": {
+    "active": [
+      "MSFT","GOOGL","AMZN","TSMC","DDOG","SNOW","ARM","MPWR",
+      "SHOP","SE","CRWD","SU.PA","VRT","CPNG","ENVX"
+    ],
+    "inactive": [
+      "NVDA"
+    ]
+  },
+  "venus": {
+    "active": [
+      "MSFT","AMZN","ASML","LLY","NVO","BEP","VUSA.DE"
+    ],
+    "inactive": [
+      "NVDA","PLTR","LMT","ADS.DE","SRT.DE","WOLF",
+      "VUSD.DE",
+      "IE00B4L5Y983",
+      "IE00B66F4759"
+    ]
+  },
+  "notgroschen": {
+    "active": [
+      "FT ICAV-FTSE CHN ETF DLA",
+      "V.S+P500 U.ETF DLA"
+    ]
+  }
+}
