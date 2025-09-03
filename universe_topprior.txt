@@ -30,6 +30,9 @@ NVDA
 PLTR
 LMT
 ADS.DE     # Adidas
+JKS        # Jinko Solar
+NFLX.      # Netflix
+DTG.DE.    # Daimler Truck
 SRT.DE     # Sartorius
 WOLF       # Wolfspeed
 VUSD.DE    # Vanguard S&P 500 Distributing
