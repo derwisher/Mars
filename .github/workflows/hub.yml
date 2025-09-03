@@ -1,7 +1,8 @@
 name: Mars CI
+
 on:
   schedule:
-    - cron: "0,30 * * * *"   # alle 30 Minuten
+    - cron: "0,30 * * * *"     # alle 30 Minuten
   workflow_dispatch: {}
 
 permissions:
@@ -11,15 +12,17 @@ jobs:
   run:
     runs-on: ubuntu-latest
 
-    # <<< Hier kommen die Umgebungsvariablen für die Rotation und die Größe pro Lauf
+    # Umgebungsvariablen für Rotation/Umfang je Lauf
     env:
-      ROTATION_SLOTS: "6"    # Anzahl der Stunden-Segmente (z.B. 4, 6 oder 8)
-      MAX_UNIVERSE: "200"    # wie viele Ticker pro Lauf gescannt werden (200 ist stabil)
+      ROTATION_SLOTS: "6"      # Anzahl Rotations-Segmente (z.B. 4/6/8)
+      MAX_UNIVERSE: "200"      # max. Ticker pro Lauf (200 ist stabil)
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
