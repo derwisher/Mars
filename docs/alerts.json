@@ -1,5 +1,5 @@
 {
-  "as_of": "2025-09-03T14:03:34Z",
+  "as_of": "2025-09-03T14:47:18Z",
   "universe": [
     "GOOGL",
     "DDOG",
@@ -74,55 +74,55 @@
   "scores_top15": [
     {
       "ticker": "MPWR",
-      "score": 0.6063
+      "score": 0.6121
     },
     {
       "ticker": "SNOW",
-      "score": 0.5709
+      "score": 0.5782
     },
     {
       "ticker": "DDOG",
-      "score": 0.5578
-    },
-    {
-      "ticker": "GOOGL",
-      "score": 0.5508
+      "score": 0.5601
     },
     {
       "ticker": "TSM",
-      "score": 0.5448
+      "score": 0.5582
+    },
+    {
+      "ticker": "GOOGL",
+      "score": 0.551
     },
     {
       "ticker": "CPNG",
-      "score": 0.4748
+      "score": 0.4796
     },
     {
       "ticker": "NVDA",
-      "score": 0.4548
+      "score": 0.469
     },
     {
       "ticker": "MSFT",
-      "score": 0.4423
-    },
-    {
-      "ticker": "AMZN",
-      "score": 0.3591
+      "score": 0.4504
     },
     {
       "ticker": "SE",
-      "score": 0.355
+      "score": 0.3694
+    },
+    {
+      "ticker": "AMZN",
+      "score": 0.3666
     },
     {
       "ticker": "SHOP",
-      "score": 0.2839
+      "score": 0.2932
     },
     {
       "ticker": "ENVX",
-      "score": 0.2278
+      "score": 0.2231
     },
     {
       "ticker": "ARM",
-      "score": 0.1586
+      "score": 0.1696
     }
   ],
   "risk": {
