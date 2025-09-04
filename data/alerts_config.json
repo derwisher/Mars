@@ -1,10 +1,10 @@
 {
   "meta": {
     "fx_check": {
-      "feeds": ["EZB", "Bloomberg", "Reuters", "Yahoo", "LSX"],
+      "feeds": ["EZB", "Bloomberg", "Reuters", "Yahoo", "LS-Xetra"],
       "tolerance": 0.002
     },
-    "dual_layer": "USD reference, EUR action (only EUR may trigger)",
+    "dual_layer": "USD reference, EUR action (only EUR triggers)",
     "debounce_seconds": 120,
     "volume_min_x": 1.3,
     "volume_spike_x": 1.5,
@@ -14,24 +14,24 @@
     "session_only": true
   },
 
-  "Mars": {
+  "mars": {
     "core_growth": {
-      "tickers": ["MSFT","AMZN","GOOGL","TSM","MPWR","SNOW","DDOG","ARM","SHOP","SE"],
+      "tickers": ["MSFT", "AMZN", "GOOGL", "TSMC", "MPWR", "SNOW", "DDOG", "ARM", "SHOP", "SE"],
       "trim_drop_5d": -0.12,
       "tp_gain_intraday": 0.12,
-      "momentum_break": { "rule": "close<dma50 AND rs_weak AND vol>=1.3" }
+      "momentum_break": { "rule": "close<dma50 AND rs_weak AND vol>1.3x" }
     },
     "nvda": {
       "mode": "fail_safe",
-      "triggers": { "intraday": -0.12, "close_below_low5": true }
+      "triggers": { "intraday": -0.12, "close_low5": true }
     },
     "satellites": {
       "CRWD": { "add_vs_entry_pct": -0.10 },
-      "SU":   { "add_below_eur": 205.00, "stop_orient_close_eur": 200.00 },
-      "VRT":  { "add_below_eur": 100.00, "stop_orient_close_eur": 95.00 }
+      "SU": { "add_below_eur": 205.00, "stop_orient": 200.00 },
+      "VRT": { "add_below_eur": 100.00, "stop_orient": 95.00 }
     },
     "moonshots": {
-      "tickers": ["ENVX","CPNG","SE"],
+      "tickers": ["ENVX", "CPNG", "SE"],
       "rules": {
         "warn_intraday": -0.15,
         "warn_vs5d": -0.25,
@@ -42,24 +42,24 @@
     }
   },
 
-  "Venus": {
+  "venus": {
     "nvda_tranches": {
       "t1_pct": 0.25,
-      "t1_if": { "close_below_low5": true, "intraday": -0.06, "vol_x_min": 1.5 },
+      "t1_if": { "close_below_low5": true, "intraday_drop": -0.06, "vol_up": true },
       "t2_pct_range": [0.10, 0.15],
-      "t2_if": { "close_below_dma50": true, "pivot_break": true, "vol_x_min": 1.3 }
+      "t2_if": { "close_below_dma50": true, "pivot_break": true, "vol_up": true }
     },
     "sparplan": {
-      "tickers": ["MSFT","AMZN"],
+      "tickers": ["MSFT", "AMZN"],
       "allow_trim": false
     },
     "add_on_dips": {
-      "tickers": ["ASML","LLY","NVO","PEP","VOO","BEP"],
+      "tickers": ["ASML", "LLY", "NVO", "PEP", "VOO", "Brookfield"],
       "dip_range": [-0.05, -0.03],
       "no_chase": true
     },
     "restpositions": {
-      "tickers": ["NFLX","PLTR","ADS","SRT","JKS","ENVX","DT","LMT","WOLF","ENV","MSCIW","SP500_DIST","SML600"],
+      "tickers": ["NFLX", "PLTR", "ADS", "SRT", "JKS", "ENVX", "DT", "LMT", "WOLF", "Envitec", "MSCIW", "S&P500Dist", "SML600"],
       "no_dca": true,
       "alert_hard_break_only": true
     }
@@ -76,7 +76,7 @@
     },
     "cluster": {
       "nvda_family_max": 0.20,
-      "prefer_trim_portfolio": "gosia"
+      "prefer_trim_portfolio": "venus"
     },
     "correlation": {
       "ndx_threshold": 0.90,
