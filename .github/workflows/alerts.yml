@@ -12,7 +12,17 @@ on:
     - cron: '0 16 * * 1-5'  # 17:00 CET
 
 jobs:
-  run-alerts:
+  run-alerts:       - name: Render Markdown brief
+        run: |
+          python3 tools/render_alerts_md.py
+
+      - name: Commit & push brief
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/alerts_brief.md
+          git commit -m "alerts: brief $(date -u +'%Y-%m-%dT%H:%M:%SZ')" || echo "nichts zu committen"
+          git push
     runs-on: ubuntu-latest
     permissions:
       contents: write           # wir committen das Ergebnis ins Repo
