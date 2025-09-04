@@ -2,21 +2,13 @@ name: Alerts & Brief
 
 on:
   schedule:
-    # UTC-Cron, deckt typ. 06/07/11/12/16/17 CET/CEST mit Versatz ab
-    - cron: "6 6 * * 1-5"
-    - cron: "6 7 * * 1-5"
-    - cron: "10 10 * * 1-5"
-    - cron: "11 11 * * 1-5"
-    - cron: "15 15 * * 1-5"
-    - cron: "16 16 * * 1-5"
-  workflow_dispatch: {}
-
-permissions:
-  contents: write
-
-concurrency:
-  group: alerts-${{ github.ref }}
-  cancel-in-progress: false
+    - cron: "0 5 * * 1-5"   # 06:00 CET
+    - cron: "0 6 * * 1-5"   # 07:00 CET
+    - cron: "0 10 * * 1-5"  # 11:00 CET
+    - cron: "0 11 * * 1-5"  # 12:00 CET
+    - cron: "0 15 * * 1-5"  # 16:00 CET
+    - cron: "0 16 * * 1-5"  # 17:00 CET
+  workflow_dispatch:
 
 jobs:
   alerts:
@@ -24,82 +16,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
+        run: pip install -r requirements.txt
 
-      - name: Ensure docs/alerts.json exists
-        run: |
-          test -f docs/alerts.json || (echo '{}' > docs/alerts.json)
+      - name: Run Alerts
+        run: python tools/run_alerts.py > docs/alerts.json
 
-      # Falls du bereits einen Renderer hast (z. B. tools/render_alerts_md.py), nutze ihn:
-      - name: Render docs/alerts_brief.md
-        run: |
-          mkdir -p docs
-          if [ -f tools/render_alerts_md.py ]; then
-            python tools/render_alerts_md.py
-          else
-            # Fallback: Minimal-Renderer aus JSON -> Markdown
-            python - <<'PY'
-import json, pathlib, datetime
-p = pathlib.Path("docs/alerts.json")
-data = {}
-try:
-    data = json.loads(p.read_text(encoding="utf-8"))
-except Exception:
-    data = {}
-md = ["# Alerts Brief — " + datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"), ""]
-for sec in ("Mars","Venus","family"):
-    if sec in data:
-        md.append(f"## {sec}")
-        alerts = data.get(sec, {}).get("alerts", [])
-        if not alerts:
-            md.append("_(keine Alerts)_")
-        else:
-            for a in alerts:
-                md.append(f"- **{a.get('topic','?')}** — Score {a.get('score','?')} | Confidence {a.get('confidence','?')}")
-        md.append("")
-pathlib.Path("docs/alerts_brief.md").write_text("\n".join(md), encoding="utf-8")
-PY
-          fi
+      - name: Preview Alerts
+        run: head -n 20 docs/alerts.json
 
-      - name: Preview first lines of docs/alerts_brief.md
+      - name: Commit & Push Alerts
         run: |
-          sed -n '1,80p' docs/alerts_brief.md || true
-
-      # --- Force-Push Commit-Flow (vermeidet Rebase/Merge-Fails im CI) ---
-      - name: Commit & push docs/alerts_brief.md
-        run: |
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/alerts_brief.md || true
-
-          if git diff --cached --quiet; then
-            echo "Keine Änderungen zu committen."
-          else
-            git commit -m "CI(alerts): update alerts_brief.md ($(date -u +'%Y-%m-%dT%H:%MZ'))"
-            git push origin HEAD:main --force
-          fi
-
-      # Optional: Telegram-Benachrichtigung (nur wenn Secrets gesetzt)
-      - name: Notify Telegram (optional)
-        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
-        env:
-          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TG_CHAT : ${{ secrets.TELEGRAM_CHAT_ID }}
-          RUN_URL : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          MSG="Hallo 👋 – Alerts/Brief aktualisiert.\nRun: ${RUN_URL}"
-          curl -sS "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
-            -d "chat_id=${TG_CHAT}" \
-            --data-urlencode "text=${MSG}" >/dev/null
+          git add docs/alerts.json
+          git commit -m "update alerts.json" || echo "No changes to commit"
+          git pull --rebase || true
+          git push || true
