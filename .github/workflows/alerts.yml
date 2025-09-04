@@ -48,8 +48,19 @@ jobs:
         if: steps.timegate.outputs.continue == 'false'
         run: echo "Skipping alerts brief (not 07/12/17 Berlin)." && exit 0
 
-      # ---- Engine erneut laufen lassen (falls main zeitlich versetzt) ----
+      # ---- NEU: EUR-Preis-Snapshot (frische Kurse für die Engine) ----
+      - name: Pull live prices (EUR snapshot)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python tools/live_data.py
+          echo "===== data/prices_eur_snapshot.csv (erste 5 Zeilen) ====="
+          sed -n '1,5p' data/prices_eur_snapshot.csv || true
+
+      # ---- Engine laufen lassen (mit PYTHONPATH, damit 'tools.*' import klappt) ----
       - name: Run Alert Engine
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           python tools/run_alerts.py
           echo "===== docs/alerts.json (erste 40) ====="
@@ -59,6 +70,8 @@ jobs:
 
       # ---- Brief rendern ----
       - name: Render Markdown Brief
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           mkdir -p docs
           if [ -f tools/render_alerts_md.py ]; then
@@ -145,4 +158,4 @@ PY
           curl -sS "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT}" \
             --data-urlencode text@/tmp/tg_msg.txt \
-            >/dev/null || true
+            >/dev/null || truep
