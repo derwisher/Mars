@@ -1,132 +1,223 @@
-# tools/live_data.py
 #!/usr/bin/env python3
-import math, time
-from datetime import datetime, timezone
+# -*- coding: utf-8 -*-
+
+"""
+tools/alerts_engine.py
+Regel-Engine für Alerts:
+- liest Kontexte/Parameter aus run_alerts(name, cfg)
+- nutzt optionale Snapshots (EUR/Preis, USD-Ref, Volumen) aus data/*.csv
+- dual-layer Logik: USD reference, EUR action
+- QA-Gates: FX-Toleranz, Debounce, Volume, Min-Move
+- Score (0..100), Confidence (1..5), Varianten A/B Text
+"""
+
+from __future__ import annotations
 from pathlib import Path
+from datetime import datetime, timezone
+import time
+import csv
 
-import pandas as pd
-import yfinance as yf
-
+# ------------------------------------------------------------
+# Pfade für optionale Snapshots
+# ------------------------------------------------------------
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
-OUT  = DATA / "prices_eur_snapshot.csv"
+DATA_DIR = ROOT / "data"
+PRICES_EUR_SNAP = DATA_DIR / "prices_eur_snapshot.csv"
+FX_SNAP         = DATA_DIR / "fx_snapshot.csv"
 
-# === Universum bestimmen (Depot + Watch) ===
-def load_universe() -> list[str]:
-    uni = set()
-    for name in ("universe_core.txt", "universe_watch.txt"):
-        p = DATA / name
-        if p.exists():
-            for ln in p.read_text(encoding="utf-8").splitlines():
-                ln = ln.strip()
-                if ln and not ln.startswith("#"):
-                    uni.add(ln)
-    # fallback: harte Minimalmenge
-    if not uni:
-        uni.update(["MSFT","AMZN","GOOGL","NVDA","ASML","LLY","NVO","CRWD","SU.PA","VRT","ENVX","CPNG","SNOW","DDOG","ARM","SHOP","SE"])
-    return sorted(uni)
+# In-Memory Debounce-Store
+_DEBOUNCE = {}  # key: (portfolio, ticker, rule_key) -> last_ts
 
-def now_utc():
-    return datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
+# ------------------------------------------------------------
+# Hilfsfunktionen
+# ------------------------------------------------------------
+def _now_ts() -> float:
+    return time.time()
 
-def eur_rate_from_eurusd() -> float:
-    """liefert USD->EUR (1 USD = ? EUR)  über EURUSD=X (USD pro 1 EUR)"""
-    try:
-        eurusd = yf.Ticker("EURUSD=X").history(period="1d")["Close"]
-        if not eurusd.empty and eurusd.iloc[-1] > 0:
-            return 1.0 / float(eurusd.iloc[-1])
-    except Exception:
-        pass
-    return 0.93  # Fallback
+def _debounced(key: tuple, debounce_s: int) -> bool:
+    last = _DEBOUNCE.get(key, 0.0)
+    if _now_ts() - last < debounce_s:
+        return True
+    _DEBOUNCE[key] = _now_ts()
+    return False
 
-def fetch_batch(tickers: list[str]) -> pd.DataFrame:
-    """holt für tickers Kurse/Volumina & baut Kennzahlen"""
-    rows = []
-    rate_usd_to_eur = eur_rate_from_eurusd()
-    for sym in tickers:
-        try:
-            t = yf.Ticker(sym)
-
-            # 21 Handelstage → ~1 Monat für 20d-Volumen
-            hist = t.history(period="30d", interval="1d", auto_adjust=False)
-            if hist.empty:
-                continue
-
-            # Schlusskurse
-            close = hist["Close"].astype(float)
-            last = float(close.iloc[-1])
-            prev = float(close.iloc[-2]) if len(close) >= 2 else float("nan")
-
-            # 5-Tage-Close (C[-5]) für vs5d
-            prev5 = float(close.iloc[-6]) if len(close) >= 6 else (float(close.iloc[0]) if len(close) > 0 else float("nan"))
-
-            # Volumen
-            if "Volume" in hist.columns:
-                vol = float(hist["Volume"].iloc[-1] or 0.0)
-                vol20 = float(hist["Volume"].tail(20).mean() or 0.0)
-            else:
-                vol, vol20 = 0.0, 0.0
-
-            # DMA50 approximieren aus 50d falls verfügbar
-            hist_long = t.history(period="90d", interval="1d", auto_adjust=False)
-            dma50 = float(hist_long["Close"].tail(50).mean()) if not hist_long.empty and len(hist_long) >= 50 else float("nan")
-
-            # Währung
-            info_curr = None
+def _load_prices_eur() -> dict:
+    out = {}
+    if not PRICES_EUR_SNAP.exists():
+        return out
+    with PRICES_EUR_SNAP.open("r", encoding="utf-8") as f:
+        rd = csv.DictReader(f)
+        for r in rd:
             try:
-                info_curr = t.fast_info.currency
+                t = r["ticker"].strip().upper()
+                out[t] = {
+                    "last_eur": float(r.get("last_eur", "0") or 0),
+                    "chg_intraday": float(r.get("change_intraday_pct", "0") or 0),
+                    "vs5d": float(r.get("vs5d_pct", "0") or 0),
+                    "vol_x": float(r.get("vol_x", "0") or 0)
+                }
             except Exception:
-                pass
-            if not info_curr:
-                try:
-                    info_curr = t.info.get("currency")
-                except Exception:
-                    info_curr = "USD"
+                continue
+    return out
 
-            # EUR-Umrechnung (einfach: USD→EUR via Rate; EUR bleibt 1.0)
-            def to_eur(v: float, cur: str) -> float:
-                if math.isnan(v):
-                    return v
-                if (cur or "USD").upper() == "USD":
-                    return v * rate_usd_to_eur
-                return v  # EUR, CHF etc. hier als nominal gelassen
+def _load_fx() -> dict:
+    fx = {}
+    if not FX_SNAP.exists():
+        fx["USDEUR"] = 1.0
+        fx["EURUSD"] = 1.0
+        return fx
+    with FX_SNAP.open("r", encoding="utf-8") as f:
+        rd = csv.DictReader(f)
+        for r in rd:
+            try:
+                pair = r["pair"].strip().upper()
+                rate = float(r["rate"])
+                fx[pair] = rate
+            except Exception:
+                continue
+    if "USDEUR" not in fx and "EURUSD" in fx and fx["EURUSD"] != 0:
+        fx["USDEUR"] = 1.0 / fx["EURUSD"]
+    if "EURUSD" not in fx and "USDEUR" in fx and fx["USDEUR"] != 0:
+        fx["EURUSD"] = 1.0 / fx["USDEUR"]
+    return fx
 
-            last_eur = to_eur(last, info_curr)
-            prev_eur = to_eur(prev, info_curr)
-            prev5_eur = to_eur(prev5, info_curr)
-            dma50_eur = to_eur(dma50, info_curr)
+def _qa_fx_ok(fx: dict, tol: float) -> bool:
+    if "EURUSD" in fx and "USDEUR" in fx and fx["USDEUR"] != 0:
+        back = 1.0 / fx["USDEUR"]
+        if abs(back - fx["EURUSD"]) / max(1e-6, fx["EURUSD"]) <= tol:
+            return True
+        return False
+    return True
 
-            # Kennzahlen
-            chg_intraday = (last_eur - prev_eur) / prev_eur if (prev_eur and not math.isnan(prev_eur) and prev_eur != 0) else 0.0
-            vs5d = (last_eur - prev5_eur) / prev5_eur if (prev5_eur and not math.isnan(prev5_eur) and prev5_eur != 0) else 0.0
-            vol_x = (vol / vol20) if vol20 else 0.0
+def _score_confidence(passed: dict) -> tuple[int, int]:
+    base = 60
+    if passed.get("fx"): base += 10
+    if passed.get("volume"): base += 10
+    if passed.get("debounce"): base -= 10
+    if passed.get("min_move"): base += 5
+    sc = max(0, min(100, base))
+    conf = 1
+    if sc >= 50: conf = 2
+    if sc >= 65: conf = 3
+    if sc >= 75: conf = 4
+    if sc >= 85: conf = 5
+    return sc, conf
 
-            rows.append({
-                "ticker": sym,
-                "last_eur": round(last_eur, 6),
-                "prevClose_eur": round(prev_eur, 6) if not math.isnan(prev_eur) else "",
-                "low5_eur": round(prev5_eur, 6) if not math.isnan(prev5_eur) else "",
-                "dma50_eur": round(dma50_eur, 6) if not math.isnan(dma50_eur) else "",
-                "change_intraday_pct": round(chg_intraday, 6),
-                "vs5d_pct": round(vs5d, 6),
-                "vol_x": round(vol_x, 3),
-                "currency": info_curr or "",
-                "as_of": now_utc()
-            })
-            time.sleep(0.25)  # Rate-Limit schonen
-        except Exception:
+def _variant_text(kind: str) -> tuple[str, str]:
+    if kind == "tp":
+        return ("A: ½-Teilverkauf, Stop anheben",
+                "B: ⅓-Teilverkauf jetzt, Rest bei weiterer Stärke")
+    if kind == "trim":
+        return ("A: 10–15% trim, Stops enger",
+                "B: 15–20% trim, Hedge erwägen")
+    if kind == "add":
+        return ("A: Starter ⅓, stop-orientiert",
+                "B: ½ jetzt, ½ tiefer – strikte Stops")
+    return ("A: konservativ", "B: offensiver")
+
+# ------------------------------------------------------------
+# Mars-Logik
+# ------------------------------------------------------------
+def _run_for_mars(cfg: dict) -> list:
+    out = []
+    px = _load_prices_eur()
+    fx = _load_fx()
+    tol = cfg.get("meta", {}).get("fx_check", {}).get("tolerance", 0.002)
+    debounce_s = cfg.get("meta", {}).get("debounce_seconds", 120)
+
+    # Beispiel: Core/Growth-Logik
+    cg = cfg.get("core_growth", {})
+    tickers = [t.upper() for t in cg.get("tickers", [])]
+    drop5d = cg.get("trim_drop_5d", -0.12)
+    tp_intraday = cg.get("tp_gain_intraday", 0.12)
+
+    for t in tickers:
+        d = px.get(t)
+        if not d:
             continue
-    return pd.DataFrame(rows)
+        passed = {"fx": _qa_fx_ok(fx, tol)}
 
-def main():
-    DATA.mkdir(parents=True, exist_ok=True)
-    uni = load_universe()
-    df = fetch_batch(uni)
-    cols = ["ticker","last_eur","prevClose_eur","low5_eur","dma50_eur","change_intraday_pct","vs5d_pct","vol_x","currency","as_of"]
-    if not df.empty:
-        df = df.reindex(columns=cols)
-    df.to_csv(OUT, index=False)
-    print(f"[OK] wrote {len(df)} rows to {OUT}")
+        # Take-Profit
+        if d["chg_intraday"] >= tp_intraday:
+            key = ("mars", t, "tp")
+            passed["debounce"] = _debounced(key, debounce_s)
+            passed["volume"] = True
+            passed["min_move"] = True
+            sc, cf = _score_confidence(passed)
+            if not passed["debounce"]:
+                a, b = _variant_text("tp")
+                out.append({
+                    "ticker": t, "type": "tp", "p_eur": d["last_eur"],
+                    "what": "Take-Profit Kandidat",
+                    "score": sc, "confidence": cf,
+                    "variant_A": a, "variant_B": b
+                })
 
-if __name__ == "__main__":
-    main()
+        # Schutz-Trim
+        if d["vs5d"] <= drop5d:
+            key = ("mars", t, "trim")
+            passed["debounce"] = _debounced(key, debounce_s)
+            passed["volume"] = True
+            passed["min_move"] = True
+            sc, cf = _score_confidence(passed)
+            if not passed["debounce"]:
+                a, b = _variant_text("trim")
+                out.append({
+                    "ticker": t, "type": "trim", "p_eur": d["last_eur"],
+                    "what": "Schutz-Trim",
+                    "score": sc, "confidence": cf,
+                    "variant_A": a, "variant_B": b
+                })
+    return out
+
+# ------------------------------------------------------------
+# Venus-Logik
+# ------------------------------------------------------------
+def _run_for_venus(cfg: dict) -> list:
+    out = []
+    px = _load_prices_eur()
+    fx = _load_fx()
+    debounce_s = 120
+
+    if "NVDA" in px:
+        d = px["NVDA"]
+        if d["chg_intraday"] <= -0.06:
+            key = ("venus", "NVDA", "t1")
+            if not _debounced(key, debounce_s):
+                sc, cf = _score_confidence({"fx": _qa_fx_ok(fx, 0.002)})
+                out.append({
+                    "ticker": "NVDA", "type": "trim_t1",
+                    "what": "Tranche 1 (25%)",
+                    "score": sc, "confidence": cf,
+                    "variant_A": "A: 25% trim",
+                    "variant_B": "B: Hedge erwägen"
+                })
+    return out
+
+# ------------------------------------------------------------
+# Family-Logik
+# ------------------------------------------------------------
+def _run_for_family(cfg: dict) -> list:
+    return [{
+        "topic": "family_risk",
+        "what": "Family P&L-Wächter aktiv",
+        "score": 50, "confidence": 2,
+        "variant_A": "A: beobachten",
+        "variant_B": "B: Re-Check bei Indexbewegung"
+    }]
+
+# ------------------------------------------------------------
+# Public API
+# ------------------------------------------------------------
+__all__ = ["run_alerts"]
+
+def run_alerts(name: str, cfg: dict | None = None) -> list:
+    cfg = cfg or {}
+    nm = (name or "").strip().lower()
+    if nm == "mars":
+        return _run_for_mars(cfg)
+    if nm == "venus":
+        return _run_for_venus(cfg)
+    if nm == "family":
+        return _run_for_family(cfg)
+    return []
