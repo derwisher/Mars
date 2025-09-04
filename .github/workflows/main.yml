@@ -2,9 +2,7 @@ name: Mars CI – MAIN
 
 on:
   schedule:
-    - cron: "2 * * * *"      # stündlich zur Minute 02 (UTC)
-    - cron: "0 12 * * *"     # täglich 12:00 UTC
-    - cron: "0 17 * * *"     # täglich 17:00 UTC
+    - cron: "2 * * * *"   # stündlich Minute 02 (UTC)
   workflow_dispatch: {}
 
 permissions:
@@ -23,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python
+      - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -34,29 +32,42 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      # >>> NEU: Live-Kurse ziehen (schreibt data/prices_eur_snapshot.csv)
+      # ---- DST-Gate: nur 07/12/17 Europe/Berlin weiterlaufen ----
+      - name: Time gate (Europe/Berlin → 07/12/17 only)
+        id: timegate
+        run: |
+          TZ=Europe/Berlin
+          HOUR=$(TZ=$TZ date +%H)
+          if [ "$HOUR" = "07" ] || [ "$HOUR" = "12" ] || [ "$HOUR" = "17" ]; then
+            echo "continue=true" >> $GITHUB_OUTPUT
+          else
+            echo "continue=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if not scheduled Berlin hour
+        if: steps.timegate.outputs.continue == 'false'
+        run: echo "Skipping run (not 07/12/17 Berlin time)." && exit 0
+
+      # ---- Live-Kurse ziehen (Snapshot) ----
       - name: Pull live prices (EUR snapshot)
         run: |
           python tools/live_data.py
-          echo "===== prices_eur_snapshot.csv (Top 10 Zeilen) ====="
+          echo "===== prices_eur_snapshot.csv (Top 10) ====="
           sed -n '1,10p' data/prices_eur_snapshot.csv || true
-      # <<<
 
-      - name: Generate docs/alerts.json (via mars_hub.py)
+      # ---- Engine: schreibt docs/alerts.json + data/alerts_out.json ----
+      - name: Run Alert Engine (run_alerts.py)
         run: |
           mkdir -p docs
-          # mars_hub.py schreibt JSON auf STDOUT → in Datei umleiten
-          python mars_hub.py > docs/alerts.json
+          python tools/run_alerts.py
+          echo "===== docs/alerts.json (erste 40) ====="
+          sed -n '1,40p' docs/alerts.json || true
 
-      - name: Preview first lines of docs/alerts.json
-        run: |
-          sed -n '1,60p' docs/alerts.json || true
-
-      # --- Force-Push Commit-Flow (vermeidet Rebase/Merge-Fails im CI) ---
+      # ---- Commit & Push (force im CI) ----
       - name: Commit & push docs/alerts.json
         run: |
           git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/alerts.json || true
           if git diff --cached --quiet; then
             echo "Keine Änderungen zu committen."
