@@ -2,76 +2,37 @@ name: Mars CI
 
 on:
   schedule:
-    # Jede volle Stunde (UTC) – deckt CET/CEST im Stundenraster ab
-    - cron: "0 * * * *"
-    # Fixe Tageszeiten (UTC) -> 12:00/17:00 CET abdecken (bei CEST entsprechend +1h)
-    - cron: "0 11 * * *"   # ~12:00 CET (11:00 UTC)
-    - cron: "0 16 * * *"   # ~17:00 CET (16:00 UTC)
-  workflow_dispatch: {}
-
-permissions:
-  contents: write      # wir committen artifacts nach /docs
-  actions: read
-  id-token: write
-
-concurrency:
-  group: mars-ci-${{ github.ref }}
-  cancel-in-progress: false
+    - cron: "0 * * * *"      # jede volle Stunde
+    - cron: "0 12 * * *"     # täglich 12:00 Uhr
+    - cron: "0 17 * * *"     # täglich 17:00 Uhr
+  workflow_dispatch:          # erlaubt manuelles Auslösen
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      # >>>> WICHTIG: Pfad an Repo-Namen angepasst
-      # Falls dein Repo NICHT "Mars" heißt, hier auf "python tools/mars_hub.py" ändern.
       - name: Run Mars Hub
-        run: |
-          set -e
-          python Mars/tools/mars_hub.py
+        run: python mars_hub.py   # liegt im Repo-Root, nicht im tools-Ordner
 
-      - name: Collect artifact to docs/alerts.json
+      - name: Save alerts.json
         run: |
-          set -e
           mkdir -p docs
+          cp alerts.json docs/
 
-          # 1) bevorzugt aus data/alerts_out.json
-          if [ -f "data/alerts_out.json" ]; then
-            cp data/alerts_out.json docs/alerts.json
-          # 2) fallback: alerts.json im Repo-Root
-          elif [ -f "alerts.json" ]; then
-            cp alerts.json docs/alerts.json
-          else
-            echo '{}' > docs/alerts.json
-          fi
-
-          # Minimal-Validierung: JSON muss nicht leer sein
-          test -s docs/alerts.json || echo '{}' > docs/alerts.json
-
-      - name: Commit & push results if changed
+      - name: Commit and push results
         run: |
-          set -e
-          git config --global user.name  "github-actions[bot]"
+          git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add docs/alerts.json || true
-
-          # Nur committen, wenn es echte Änderungen gibt
-          if ! git diff --cached --quiet; then
-            git commit -m "ci: update docs/alerts.json ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+          git add docs/alerts.json
+          git commit -m "Update alerts.json" || echo "No changes to commit"
+          git push
