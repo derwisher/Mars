@@ -1,28 +1,58 @@
 {
   "mars": {
-    "active": [
-      "MSFT","GOOGL","AMZN","TSMC","DDOG","SNOW","ARM","MPWR",
-      "SHOP","SE","CRWD","SU.PA","VRT","CPNG","ENVX"
+    "core_growth": [
+      "MSFT","AMZN","GOOGL","TSM","MPWR","SNOW","DDOG","ARM","SHOP","SE","NVDA"
     ],
-    "inactive": [
-      "NVDA"
+    "nvda_position": {
+      "status": "halten",
+      "sparplan": false
+    },
+    "satellites": [
+      "CRWD","SU.PA","VRT"
+    ],
+    "moonshots": [
+      "ENVX","CPNG","SE"
     ]
   },
+
   "venus": {
-    "active": [
-      "MSFT","AMZN","ASML","LLY","NVO","BEP","VUSA.DE"
+    "sparplan": [
+      "MSFT","AMZN","ASML","LLY","NVO","VUSA.DE"
     ],
-    "inactive": [
-      "NVDA","PLTR","LMT","ADS.DE","SRT.DE","WOLF",
-      "VUSD.DE", "DTG.DE", "NFLX", "JKS"
-      "IE00B4L5Y983",
-      "IE00B66F4759"
+    "nvda_position": {
+      "status": "halten",
+      "sparplan": false,
+      "tranches": ["25% Trim bei LOW5/Pivot","10–15% Trim bei DMA50-Bruch"]
+    },
+    "add_on_dips": [
+      "ASML","LLY","NVO","PEP","VUSA.DE","BEP"
+    ],
+    "restpositions": [
+      "PLTR","ADS.DE","SRT.DE","JKS","ENVX","DT","LMT","WOLF","ENV.DE",
+      "NFLX","MSCI.WORLD","S&P500.DIST","S&P600"
     ]
   },
+
   "notgroschen": {
-    "active": [
-      "FT ICAV-FTSE CHN ETF DLA",
-      "V.S+P500 U.ETF DLA"
-    ]
+    "sparplan": {
+      "China_ETF": 150,
+      "S&P500_ETF": 150
+    },
+    "status": "separat tracken (kein Performance-Vergleich, nur Sicherheitsblock)"
+  },
+
+  "family": {
+    "risk_limits": {
+      "dd_family": -0.025,
+      "dd_sub": -0.035
+    },
+    "exposure_limits": {
+      "max_invested": 0.95,
+      "min_cash": 0.05
+    },
+    "clusters": {
+      "nvda_family_max": 0.20,
+      "prefer_trim": "venus"
+    }
   }
 }
