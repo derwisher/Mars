@@ -1,0 +1,52 @@
+name: Prices Snapshot (EUR)
+
+on:
+  workflow_dispatch: {}
+  # Optional: stündlich automatisch aktivieren
+  # schedule:
+  #   - cron: "12 * * * *"   # stündlich Minute 12 (UTC)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prices-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pull-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Pull live prices (EUR snapshot)
+        run: |
+          python tools/live_data.py
+          echo "===== Snapshot (Top 12 Zeilen) ====="
+          sed -n '1,12p' data/prices_eur_snapshot.csv || true
+
+      - name: Commit & push snapshot
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/prices_eur_snapshot.csv || true
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen zu committen."
+          else
+            git commit -m "CI(prices): refresh prices_eur_snapshot.csv ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            git push origin HEAD:main --force
+          fi
