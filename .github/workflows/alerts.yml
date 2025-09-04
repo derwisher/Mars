@@ -1,22 +1,14 @@
 name: Alerts & Brief
 
 on:
-  workflow_dispatch: {}     # manueller Start
-  schedule:                 # UTC Zeiten (decken CET/CEST ab)
-    - cron: '0 5 * * 1-5'   # 06:00 CET / 07:00 CEST
-    - cron: '0 6 * * 1-5'   # 07:00 CET
-    - cron: '0 10 * * 1-5'  # 11:00 CET / 12:00 CEST
-    - cron: '0 11 * * 1-5'  # 12:00 CET
-    - cron: '0 15 * * 1-5'  # 16:00 CET / 17:00 CEST
+  schedule:
+    - cron: '0 6 * * 1-5'   # 07:00 CET (bei CEST 06:00 UTC)
+    - cron: '0 15 * * 1-5'  # 16:00 CET
     - cron: '0 16 * * 1-5'  # 17:00 CET
-
-permissions:
-  contents: write
-  actions: read
-  id-token: write
+  workflow_dispatch:
 
 concurrency:
-  group: alerts-${{ github.ref }}
+  group: publish-brief-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -25,38 +17,42 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
-      - name: Install deps (optional)
-        run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - name: Run alert engine (JSON)
+      # Dein Renderer, der docs/alerts_brief.md erzeugt
+      - name: Render Markdown brief
         run: |
-          python3 tools/run_alerts.py
-          test -f data/alerts_out.json && jq . data/alerts_out.json | head -n 60 || true
+          mkdir -p docs
+          python tools/render_alerts_md.py > docs/alerts_brief.md
 
-      - name: Render Markdown Brief
+      # Robustes Commit & Push nur für das Briefing
+      - name: Commit & push brief
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
-          python3 tools/render_alerts_md.py
-          test -f docs/alerts_brief.md && head -n 60 docs/alerts_brief.md || true
-
-      - name: Commit & push Brief + JSON
-        run: |
+          set -e
           git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/alerts_brief.md data/alerts_out.json || true
-          git commit -m "alerts: brief $(date -u +'%Y-%m-%dT%H:%M:%SZ')" || echo "nichts zu committen"
-          git push || true
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Upload artifact (Brief)
-        uses: actions/upload-artifact@v4
-        with:
-          name: alerts_brief
-          path: |
-            docs/alerts_brief.md
-            data/alerts_out.json
+          test -f docs/alerts_brief.md
+
+          git fetch origin "$BRANCH"
+          git rebase origin/"$BRANCH" || git rebase --abort
+
+          git add docs/alerts_brief.md
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen am Brief – Commit/Push übersprungen."
+          else
+            git commit -m "CI: update alerts_brief.md ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            git push origin HEAD:"$BRANCH"
+          fi
