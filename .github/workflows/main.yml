@@ -1,38 +1,62 @@
-name: Mars CI
+name: Mars CI Main
 
 on:
   schedule:
-    - cron: "0 * * * *"      # jede volle Stunde
-    - cron: "0 12 * * *"     # täglich 12:00 Uhr
-    - cron: "0 17 * * *"     # täglich 17:00 Uhr
-  workflow_dispatch:          # erlaubt manuelles Auslösen
+    - cron: '0 * * * *'     # jede volle Stunde (UTC)
+    - cron: '0 12 * * *'    # täglich 13:00 CET-Sommer / 12:00 CET-Winter (UTC)
+    - cron: '0 17 * * *'    # täglich 18:00 CET-Sommer / 17:00 CET-Winter (UTC)
+  workflow_dispatch: {}     # manuell startbar
+
+permissions:
+  contents: write           # wir committen docs/alerts.json
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   run:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run Mars Hub
-        run: python mars_hub.py   # liegt im Repo-Root, nicht im tools-Ordner
-
-      - name: Save alerts.json
         run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # >>> Kernschritt: HUB erzeugt die Alerts und schreibt direkt in docs/
+      - name: Generate alerts.json (via mars_hub.py)
+        shell: bash
+        run: |
+          set -e
           mkdir -p docs
-          cp alerts.json docs/
+          python mars_hub.py > docs/alerts.json
+          # Safety: Datei muss existieren und nicht leer sein
+          test -s docs/alerts.json
 
-      - name: Commit and push results
+      # Optionales Preview im Log (hilft beim Debuggen)
+      - name: Preview first lines of docs/alerts.json
+        run: sed -n '1,120p' docs/alerts.json || true
+
+      # Commit nur, wenn sich der Inhalt geändert hat
+      - name: Commit & push docs/alerts.json
+        shell: bash
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- docs/alerts.json; then
+            echo "No changes in docs/alerts.json — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/alerts.json
-          git commit -m "Update alerts.json" || echo "No changes to commit"
+          git commit -m "CI: update alerts.json ($(date -u +'%Y-%m-%dT%H:%MZ'))"
           git push
