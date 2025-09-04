@@ -69,7 +69,7 @@ jobs:
           echo "===== docs/alerts.json (erste 40) ====="
           sed -n '1,40p' docs/alerts.json || true
 
-      # --- Brief rendern (externer Renderer oder Inline-Fallback) ---
+      # --- Brief rendern (externer Renderer oder Fallback in Tempdatei) ---
       - name: Render Markdown Brief
         shell: bash
         run: |
@@ -77,16 +77,19 @@ jobs:
           if [ -f tools/render_alerts_md.py ]; then
             python tools/render_alerts_md.py
           else
-            python <<'PY'
+            cat > /tmp/render_alerts.py <<'PY'
 import json, pathlib, datetime
+
 p = pathlib.Path("docs/alerts.json")
 data = {}
 try:
     data = json.loads(p.read_text(encoding="utf-8"))
 except Exception:
     data = {}
+
 ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 lines = [f"# Alerts Brief — {ts}", ""]
+
 for sec in ("mars","venus","family"):
     lines.append(f"## {sec}")
     alerts = (data.get(sec) or {}).get("alerts", [])
@@ -100,8 +103,11 @@ for sec in ("mars","venus","family"):
         what = (a.get("what") or "").strip()
         lines.append(f"- **{topic}** — Score {sc} | Confidence {cf}\n  {what}")
     lines.append("")
+
 pathlib.Path("docs/alerts_brief.md").write_text("\n".join(lines), encoding="utf-8")
 PY
+            python /tmp/render_alerts.py
+          fi
 
       - name: Preview docs/alerts_brief.md
         run: |
