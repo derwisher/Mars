@@ -39,3 +39,17 @@ jobs:
           git commit -m "update alerts.json" || echo "No changes to commit"
           git pull --rebase || true
           git push || true
+
+      - name: Send Telegram Notification
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          MSG="🚨 Mars Alerts – neuer Bericht verfügbar 🚨%0A\n\
+          Repository: $GITHUB_REPOSITORY%0A\
+          Workflow: $GITHUB_WORKFLOW%0A\
+          Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d text="$MSG"
