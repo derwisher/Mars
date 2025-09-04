@@ -32,7 +32,7 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      # ---- DST-Gate (07/12/17 Berlin) ----
+      # ---- DST-Gate (nur 07/12/17 Europe/Berlin) ----
       - name: Time gate (Europe/Berlin → 07/12/17 only)
         id: timegate
         run: |
@@ -44,34 +44,22 @@ jobs:
             echo "continue=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Stop if not scheduled Berlin hour
+      - name: Stop if not Berlin hour
         if: steps.timegate.outputs.continue == 'false'
         run: echo "Skipping alerts brief (not 07/12/17 Berlin)." && exit 0
 
-      # ---- NEU: EUR-Preis-Snapshot (frische Kurse für die Engine) ----
-      - name: Pull live prices (EUR snapshot)
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+      # ---- Sicherstellen, dass docs/alerts.json existiert (vom MAIN-Run) ----
+      - name: Check alerts.json presence
         run: |
-          python tools/live_data.py
-          echo "===== data/prices_eur_snapshot.csv (erste 5 Zeilen) ====="
-          sed -n '1,5p' data/prices_eur_snapshot.csv || true
-
-      # ---- Engine laufen lassen (mit PYTHONPATH, damit 'tools.*' import klappt) ----
-      - name: Run Alert Engine
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          python tools/run_alerts.py
+          if [ ! -f docs/alerts.json ]; then
+            echo "❌ docs/alerts.json fehlt (MAIN noch nicht gelaufen?)"
+            exit 2
+          fi
           echo "===== docs/alerts.json (erste 40) ====="
-          sed -n '1,40p' docs/alerts.json || true
-          echo "===== data/alerts_out.json (erste 40) ====="
-          sed -n '1,40p' data/alerts_out.json || true
+          head -n 40 docs/alerts.json || true
 
-      # ---- Brief rendern ----
+      # ---- Brief rendern (dein Renderer oder Fallback) ----
       - name: Render Markdown Brief
-        env:
-          PYTHONPATH: ${{ github.workspace }}
         run: |
           mkdir -p docs
           if [ -f tools/render_alerts_md.py ]; then
@@ -80,27 +68,23 @@ jobs:
             python - <<'PY'
 import json, pathlib, datetime
 p = pathlib.Path("docs/alerts.json")
-data = {}
-try:
-    data = json.loads(p.read_text(encoding="utf-8"))
-except Exception:
-    data = {}
-ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-lines = [f"# Alerts Brief — {ts}", ""]
+d={}
+try: d=json.loads(p.read_text(encoding="utf-8"))
+except: d={}
+ts=datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+lines=[f"# Alerts Brief — {ts}",""]
 for sec in ("mars","venus","family"):
     lines.append(f"## {sec}")
-    alerts = (data.get(sec) or {}).get("alerts", [])
-    if not alerts:
-        lines.append("_(keine Alerts)_\n")
-        continue
-    for a in alerts[:10]:
-        topic = a.get("ticker") or a.get("topic") or "?"
-        sc = a.get("score","?")
-        cf = a.get("confidence","?")
-        what = a.get("what","").strip()
-        lines.append(f"- **{topic}** — Score {sc} | Confidence {cf}\n  {what}")
+    al=(d.get(sec) or {}).get("alerts",[])
+    if not al:
+        lines.append("_(keine Alerts)_\n"); continue
+    for a in al[:10]:
+        tp=a.get("ticker") or a.get("topic") or "?"
+        sc=a.get("score","?"); cf=a.get("confidence","?")
+        what=(a.get("what") or "").strip()
+        lines.append(f"- **{tp}** — Score {sc} | Confidence {cf}\n  {what}")
     lines.append("")
-pathlib.Path("docs/alerts_brief.md").write_text("\n".join(lines), encoding="utf-8")
+pathlib.Path("docs/alerts_brief.md").write_text("\n".join(lines),encoding="utf-8")
 PY
 
       - name: Preview docs/alerts_brief.md
@@ -131,17 +115,14 @@ PY
         run: |
           python - <<'PY'
 import json, pathlib
-p = pathlib.Path("docs/alerts.json")
-has = False
+p=pathlib.Path("docs/alerts.json")
+has=False
 try:
-    d = json.loads(p.read_text(encoding="utf-8"))
-    for k in ("mars","venus","family"):
-        if isinstance(d.get(k), dict) and d[k].get("alerts"):
-            if len(d[k]["alerts"]) > 0:
-                has = True
-                break
-except Exception:
-    pass
+  d=json.loads(p.read_text(encoding="utf-8"))
+  for k in ("mars","venus","family"):
+    if isinstance(d.get(k),dict) and d[k].get("alerts"):
+      if len(d[k]["alerts"])>0: has=True; break
+except: pass
 open("/tmp/has.flag","w").write("1" if has else "0")
 PY
           if [ "$(cat /tmp/has.flag)" != "1" ]; then
@@ -158,4 +139,4 @@ PY
           curl -sS "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
             -d "chat_id=${TG_CHAT}" \
             --data-urlencode text@/tmp/tg_msg.txt \
-            >/dev/null || truep
+            >/dev/null || true
