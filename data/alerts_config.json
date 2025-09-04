@@ -1,40 +1,36 @@
 {
   "meta": {
-    "fx_check": {
-      "feeds": ["EZB", "Bloomberg", "Reuters", "Yahoo", "LS-Xetra"],
-      "tolerance": 0.002
-    },
-    "dual_layer": "USD reference, EUR action (LS/Xetra)",
+    "fx_check": { "feeds": ["EZB","Bloomberg","Reuters","Yahoo","LS-Xetra"], "tolerance": 0.002 },
+    "dual_layer": "USD reference, EUR action (only EUR may trigger)",
     "debounce_seconds": 120,
     "volume_min_x": 1.3,
     "volume_spike_x": 1.5,
     "min_move_eur_low_price": 0.40,
     "score_confidence": true,
-    "variants": ["A_conservative", "B_aggressive"],
+    "variants": ["A_conservative","B_aggressive"],
     "session_only": true
   },
 
   "mars": {
     "core_growth": {
-      "tickers": ["MSFT", "AMZN", "GOOGL", "TSMC", "MPWR", "SNOW", "DDOG", "ARM", "SHOP", "SE"],
+      "tickers": [
+        "MSFT","AMZN","GOOGL","TSM","MPWR","SNOW","DDOG","ARM","SHOP","SE"
+      ],
       "trim_drop_5d": -0.12,
       "tp_gain_intraday": 0.12,
       "momentum_break": { "rule": "close<dma50 AND rs_weak AND vol_up" }
     },
     "nvda": {
       "mode": "fail_safe",
-      "triggers": {
-        "intraday": -0.12,
-        "close_below_low5": true
-      }
+      "triggers": { "intraday": -0.12, "close_low5": true }
     },
     "satellites": {
       "CRWD": { "add_vs_entry_pct": -0.10 },
-      "SU":   { "add_below_eur": 205.00, "stop_orient": 200.00 },
-      "VRT":  { "add_below_eur": 100.00, "stop_orient": 95.00 }
+      "SU":   { "add_below_eur": 205.00, "stop_orient_close_eur": 200.00 },
+      "VRT":  { "add_below_eur": 100.00, "stop_orient_close_eur": 95.00 }
     },
     "moonshots": {
-      "tickers": ["ENVX", "CPNG", "SE"],
+      "tickers": ["ENVX","CPNG","SE"],
       "rules": {
         "warn_intraday": -0.15,
         "warn_vs5d": -0.25,
@@ -53,19 +49,27 @@
       "t2_if": { "close_below_dma50": true, "pivot_break": true, "vol_up": true }
     },
     "sparplan": {
-      "tickers": ["MSFT", "AMZN"],
+      "tickers": ["MSFT","AMZN","ASML","LLY","NVO","VUSA.DE"],
       "allow_trim": false
     },
     "add_on_dips": {
-      "tickers": ["ASML", "LLY", "NVO", "PEP", "VOO", "BEP"],
+      "tickers": ["ASML","LLY","NVO","PEP","VUSA.DE","BEP"],
       "dip_range": [-0.05, -0.03],
       "no_chase": true
     },
     "restpositions": {
-      "tickers": ["NFLX", "PLTR", "ADS", "SRT", "JKS", "ENVX", "DT", "LMT", "WOLF", "ENVITEC", "MSCIWORLD", "SP500_DIST", "SP600"],
+      "tickers": [
+        "PLTR","ADS.DE","SRT.DE","JKS","ENVX","DT","LMT","WOLF","ENV.DE",
+        "IE00B4L5Y983","VUSD.DE","IE00B66F4759"
+      ],
       "no_dca": true,
       "alert_hard_break_only": true
-    }
+    },
+    "tickers": [
+      "MSFT","AMZN","NVDA","ASML","LLY","NVO","PEP",
+      "PLTR","ADS.DE","SRT.DE","JKS","ENVX","DT","LMT","WOLF","ENV.DE",
+      "IE00B4L5Y983","VUSA.DE","VUSD.DE","IE00B66F4759"
+    ]
   },
 
   "family": {
