@@ -1,17 +1,15 @@
-name: Mars CI Main
+name: MARS CI MAIN
 
 on:
   schedule:
-    - cron: '0 * * * *'     # jede volle Stunde (UTC)
-    - cron: '0 12 * * *'    # täglich 13:00 CET-Sommer / 12:00 CET-Winter (UTC)
-    - cron: '0 17 * * *'    # täglich 18:00 CET-Sommer / 17:00 CET-Winter (UTC)
-  workflow_dispatch: {}     # manuell startbar
+    - cron: '0 * * * *'     # jede volle Stunde
+    - cron: '0 12 * * *'    # täglich 12:00
+    - cron: '0 17 * * *'    # täglich 17:00
+  workflow_dispatch:
 
-permissions:
-  contents: write           # wir committen docs/alerts.json
-
+# verhindert gleichzeitige Writer-Jobs auf derselben Branch
 concurrency:
-  group: ci-${{ github.ref }}
+  group: publish-docs-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -19,44 +17,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) Checkout mit kompletter Historie
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
 
-      - name: Set up Python
+      # 2) Python einrichten
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
 
+      # 3) Abhängigkeiten installieren
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      # >>> Kernschritt: HUB erzeugt die Alerts und schreibt direkt in docs/
-      - name: Generate alerts.json (via mars_hub.py)
-        shell: bash
+      # 4) Alerts erzeugen → direkt in docs/alerts.json schreiben
+      - name: Generate docs/alerts.json (via mars_hub.py)
         run: |
-          set -e
           mkdir -p docs
           python mars_hub.py > docs/alerts.json
-          # Safety: Datei muss existieren und nicht leer sein
-          test -s docs/alerts.json
 
-      # Optionales Preview im Log (hilft beim Debuggen)
+      # (optional) Erste Zeilen zeigen – gut fürs Debugging
       - name: Preview first lines of docs/alerts.json
         run: sed -n '1,120p' docs/alerts.json || true
 
-      # Commit nur, wenn sich der Inhalt geändert hat
+      # 5) Sicher committen & pushen (mit Rebase davor)
       - name: Commit & push docs/alerts.json
-        shell: bash
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
-          if git diff --quiet -- docs/alerts.json; then
-            echo "No changes in docs/alerts.json — nothing to commit."
-            exit 0
-          fi
+          set -e
           git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Sanity
+          test -f docs/alerts.json
+
+          # Gegen aktuellen Remote-Stand rebasen (vermeidet "fetch first")
+          git fetch origin "$BRANCH"
+          git rebase origin/"$BRANCH" || git rebase --abort
+
+          # Nur committen, wenn sich wirklich was geändert hat
           git add docs/alerts.json
-          git commit -m "CI: update alerts.json ($(date -u +'%Y-%m-%dT%H:%MZ'))"
-          git push
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen an docs/alerts.json – Commit/Push übersprungen."
+          else
+            git commit -m "CI: update alerts.json ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            # Fast-forward Push (bei sehr seltenen Kollisionen ggf. mit --force-with-lease)
+            git push origin HEAD:"$BRANCH"
+          fi
