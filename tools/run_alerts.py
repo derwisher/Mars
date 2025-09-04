@@ -3,12 +3,9 @@
 
 """
 tools/run_alerts.py
-Erzeugt die Alert-Ausgabe für mars / venus / family auf Basis von data/alerts_config.json
-
-- nutzt die Engine in tools/alerts_engine.py
-- schreibt nach docs/alerts.json (für Report/Brief)
-- spiegelt zusätzlich nach data/alerts_out.json (Debug/Archiv)
-- gibt das JSON auch auf STDOUT aus (für Logs)
+- lädt alerts_engine robust (lokal & CI)
+- schreibt docs/alerts.json + data/alerts_out.json
+- druckt JSON auf STDOUT
 """
 
 from __future__ import annotations
@@ -18,17 +15,23 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 # --------------------------------------------------------------------
-# Robust: 'alerts_engine' unabhängig von Arbeitsverzeichnis laden
-#   - lokal:   import tools.alerts_engine
-#   - CI:      ergänzt PYTHONPATH mit <repo>/tools und importiert alerts_engine
+# Robust laden: zuerst Paket-Import, dann Fallback via PYTHONPATH
 # --------------------------------------------------------------------
+ae = None
 try:
-    # klappt lokal, wenn das Paket 'tools' als Paket verfügbar ist
-    from tools.alerts_engine import run_alerts  # type: ignore
+    # klappt, wenn 'tools' als Paket erkannt wird
+    from tools import alerts_engine as ae  # type: ignore
 except ModuleNotFoundError:
-    ROOT = Path(__file__).resolve().parents[1]  # /…/Mars
+    ROOT = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(ROOT / "tools"))
-    from alerts_engine import run_alerts  # type: ignore
+    import alerts_engine as ae  # type: ignore
+
+# defensive: sicherstellen, dass run_alerts vorhanden ist
+if not hasattr(ae, "run_alerts"):
+    raise RuntimeError(f"alerts_engine geladen aus {getattr(ae, '__file__', '?')}, "
+                       f"aber ohne run_alerts(). Bitte Datei prüfen.")
+
+run_alerts = ae.run_alerts  # Alias
 
 
 def load_config(cfg_path: Path) -> dict:
@@ -39,23 +42,21 @@ def load_config(cfg_path: Path) -> dict:
 
 
 def main() -> None:
-    # Projekt-Root: /…/Mars
-    ROOT = Path(__file__).resolve().parents[1]
+    ROOT = Path(__file__).resolve().parents[1]  # /…/Mars
     data_dir = ROOT / "data"
     docs_dir = ROOT / "docs"
 
     cfg_path = data_dir / "alerts_config.json"
-    out_data = data_dir / "alerts_out.json"   # Spiegel/Archiv
-    out_docs = docs_dir / "alerts.json"       # vom Workflow konsumiert
+    out_data = data_dir / "alerts_out.json"
+    out_docs = docs_dir / "alerts.json"
 
     cfg = load_config(cfg_path)
 
-    # Konfig-Bäume (klein geschrieben, wie besprochen)
+    # Konfig-Bäume (klein geschrieben)
     cfg_mars   = cfg.get("mars",   {})
     cfg_venus  = cfg.get("venus",  {})
     cfg_family = cfg.get("family", {})
 
-    # Engine laufen lassen
     result = {
         "as_of_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "mars":   {"alerts": run_alerts("mars",   cfg_mars)},
@@ -63,19 +64,15 @@ def main() -> None:
         "family": {"alerts": run_alerts("family", cfg_family)},
     }
 
-    # Ausgabe-Verzeichnisse sicherstellen
     docs_dir.mkdir(parents=True, exist_ok=True)
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1) in docs/alerts.json (für Report/Brief)
     with out_docs.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
-    # 2) zusätzlich nach data/alerts_out.json (Debug/Archiv)
     with out_data.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
-    # 3) auch auf STDOUT für Logs
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
