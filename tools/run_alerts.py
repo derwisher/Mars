@@ -4,19 +4,31 @@
 """
 tools/run_alerts.py
 Erzeugt die Alert-Ausgabe für mars / venus / family auf Basis von data/alerts_config.json
+
 - nutzt die Engine in tools/alerts_engine.py
-- schreibt nach docs/alerts.json (für den Report-Workflow)
+- schreibt nach docs/alerts.json (für Report/Brief)
 - spiegelt zusätzlich nach data/alerts_out.json (Debug/Archiv)
 - gibt das JSON auch auf STDOUT aus (für Logs)
 """
 
 from __future__ import annotations
 import json
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
-# WICHTIG: korrigierter Import mit Paket-Prefix "tools."
-from tools.alerts_engine import run_alerts
+# --------------------------------------------------------------------
+# Robust: 'alerts_engine' unabhängig von Arbeitsverzeichnis laden
+#   - lokal:   import tools.alerts_engine
+#   - CI:      ergänzt PYTHONPATH mit <repo>/tools und importiert alerts_engine
+# --------------------------------------------------------------------
+try:
+    # klappt lokal, wenn das Paket 'tools' als Paket verfügbar ist
+    from tools.alerts_engine import run_alerts  # type: ignore
+except ModuleNotFoundError:
+    ROOT = Path(__file__).resolve().parents[1]  # /…/Mars
+    sys.path.insert(0, str(ROOT / "tools"))
+    from alerts_engine import run_alerts  # type: ignore
 
 
 def load_config(cfg_path: Path) -> dict:
@@ -55,15 +67,15 @@ def main() -> None:
     docs_dir.mkdir(parents=True, exist_ok=True)
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1) in docs/alerts.json (für den Report-Workflow)
+    # 1) in docs/alerts.json (für Report/Brief)
     with out_docs.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
-    # 2) zusätzlich nach data/alerts_out.json (Debug)
+    # 2) zusätzlich nach data/alerts_out.json (Debug/Archiv)
     with out_data.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
-    # 3) für Logs ausgeben
+    # 3) auch auf STDOUT für Logs
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
