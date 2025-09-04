@@ -1,29 +1,22 @@
 {
-  "Oliver": {
-    "portfolio": ["MSFT", "AMZN", "GOOGL", "TSMC", "MPWR", "SNOW", "DDOG", "ARM", "SHOP", "SE", "NVDA", "CRWD", "SCHN", "VRT", "ENVX", "CPNG"],
-    "rules": {
-      "core_growth": "Trim if ≤ -12% vs 5d close or ≥ +12% intraday",
-      "nvda": "Fail-safe only: ≤ -12% intraday or close < LOW5",
-      "crwd": "Add if -10% vs entry",
-      "schneider": "Add if <205€, stop <200€",
-      "vertiv": "Add if <100€, stop <95€",
-      "moonshots": "Warn if ≤ -15% intraday & vol ≥1.5x or ≤ -25% vs 5d"
+  "meta": {
+    "timestamp_cet": "INIT",
+    "source": "tools/run_alerts.py",
+    "config": {
+      "dual_layer": "",
+      "debounce_seconds": 120,
+      "volume_min_x": 1.3,
+      "volume_spike_x": 1.5,
+      "fx_tolerance": 0.002
     }
   },
-  "Gosia": {
-    "portfolio": ["MSFT", "AMZN", "ASML", "LLY", "NVO", "PEP", "VOO", "BEP", "NFLX", "PLTR", "ADS", "SRT", "JKS", "ENVX", "DT", "LMT", "WOLF", "ENV", "MSCIW", "S&P500dist", "SP600"],
-    "rules": {
-      "nvda": "Tranche 1 (25%) if close < LOW5 or intraday ≤ -6% w/ vol↑; Tranche 2 (10-15%) if close < DMA50",
-      "asml_lly_nvo_pep_voo_bep": "Add on dips (-3…-5%), no chase",
-      "restwerte": "No DCA, alert only on hard breaks"
-    }
+  "mars": {
+    "alerts": []
   },
-  "Family": {
-    "rules": {
-      "pnl": "Risk alert if ≤ -2.5% family or ≤ -3.5% any depot",
-      "exposure": "De-risk if >95% invested & market red",
-      "nvda_cluster": "If >20% family, trim Gosia first",
-      "corr": "If Family–NDX corr >0.9 → diversification hint"
-    }
+  "venus": {
+    "alerts": []
+  },
+  "family": {
+    "alerts": []
   }
 }
