@@ -1,44 +1,604 @@
 {
-  "Mars": {
-    "alerts": []
-  },
-  "Venus": {
-    "alerts": []
-  },
-  "family": {
-    "alerts": [
-      {
-        "topic": "family_risk",
-        "what": "Family P&L-Wächter aktiv (Limits dd_family -0.025 / dd_sub -0.035)",
-        "score": 50,
-        "confidence": 2,
-        "variant_A": "A: nur beobachten",
-        "variant_B": "B: Re-Check bei starken Indexbewegungen"
-      },
-      {
-        "topic": "exposure_guard",
-        "what": "Exposure-Limit ~95% – bei rotem Markt de-risk",
-        "score": 55,
-        "confidence": 2,
-        "variant_A": "A: keine Aktion",
-        "variant_B": "B: Mini-Trim in stärksten Gewinnern"
-      },
-      {
-        "topic": "cluster_nvda",
-        "what": "NVDA-Cluster Max 20%, Trim bevorzugt in venus",
-        "score": 60,
-        "confidence": 3,
-        "variant_A": "A: nur Hinweis",
-        "variant_B": "B: bei Signal Tranche in bevorzugtem Depot"
-      },
-      {
-        "topic": "corr_ndx",
-        "what": "Korrelation-Wächter vs. NDX > 90% → diversify_hint",
-        "score": 55,
-        "confidence": 2,
-        "variant_A": "A: halten",
-        "variant_B": "B: Diversifikation prüfen"
-      }
-    ]
-  }
+  "alerts_today": [
+    {
+      "ticker": "CVX",
+      "score": 0.7269,
+      "as_of": "2025-09-04T12:10:22.027480Z"
+    },
+    {
+      "ticker": "BRK.B",
+      "score": 0.7222,
+      "as_of": "2025-09-04T12:10:22.027498Z"
+    },
+    {
+      "ticker": "WOLF",
+      "score": 0.2908,
+      "as_of": "2025-09-04T12:10:22.027508Z"
+    },
+    {
+      "ticker": "JPM",
+      "score": 0.8925,
+      "as_of": "2025-09-04T12:10:22.027513Z"
+    },
+    {
+      "ticker": "VZ",
+      "score": 0.8187,
+      "as_of": "2025-09-04T12:10:22.027519Z"
+    },
+    {
+      "ticker": "SMCI",
+      "score": 0.5809,
+      "as_of": "2025-09-04T12:10:22.027524Z"
+    },
+    {
+      "ticker": "PDD",
+      "score": 0.5448,
+      "as_of": "2025-09-04T12:10:22.027534Z"
+    },
+    {
+      "ticker": "ON",
+      "score": 0.2594,
+      "as_of": "2025-09-04T12:10:22.027539Z"
+    },
+    {
+      "ticker": "PLTR",
+      "score": 0.5721,
+      "as_of": "2025-09-04T12:10:22.027542Z"
+    },
+    {
+      "ticker": "GS",
+      "score": 0.8532,
+      "as_of": "2025-09-04T12:10:22.027546Z"
+    },
+    {
+      "ticker": "GOOGL",
+      "score": 0.3061,
+      "as_of": "2025-09-04T12:10:22.027552Z"
+    },
+    {
+      "ticker": "SHEL",
+      "score": 0.6078,
+      "as_of": "2025-09-04T12:10:22.027558Z"
+    },
+    {
+      "ticker": "OR.PA",
+      "score": 0.6281,
+      "as_of": "2025-09-04T12:10:22.027563Z"
+    },
+    {
+      "ticker": "MDB",
+      "score": 0.462,
+      "as_of": "2025-09-04T12:10:22.027569Z"
+    },
+    {
+      "ticker": "IE00B4L5Y983",
+      "score": 0.5391,
+      "as_of": "2025-09-04T12:10:22.027573Z"
+    },
+    {
+      "ticker": "PG",
+      "score": 0.2921,
+      "as_of": "2025-09-04T12:10:22.027576Z"
+    },
+    {
+      "ticker": "NXPI",
+      "score": 0.7825,
+      "as_of": "2025-09-04T12:10:22.027578Z"
+    },
+    {
+      "ticker": "FTNT",
+      "score": 0.2397,
+      "as_of": "2025-09-04T12:10:22.027581Z"
+    },
+    {
+      "ticker": "VRT",
+      "score": 0.2095,
+      "as_of": "2025-09-04T12:10:22.027584Z"
+    },
+    {
+      "ticker": "AMZN",
+      "score": 0.8334,
+      "as_of": "2025-09-04T12:10:22.027586Z"
+    },
+    {
+      "ticker": "LIN",
+      "score": 0.7266,
+      "as_of": "2025-09-04T12:10:22.027589Z"
+    },
+    {
+      "ticker": "AIR.PA",
+      "score": 0.3677,
+      "as_of": "2025-09-04T12:10:22.027592Z"
+    },
+    {
+      "ticker": "CPNG",
+      "score": 0.8276,
+      "as_of": "2025-09-04T12:10:22.027594Z"
+    },
+    {
+      "ticker": "TEAM",
+      "score": 0.7703,
+      "as_of": "2025-09-04T12:10:22.027597Z"
+    },
+    {
+      "ticker": "MPWR",
+      "score": 0.87,
+      "as_of": "2025-09-04T12:10:22.027600Z"
+    },
+    {
+      "ticker": "MS",
+      "score": 0.4613,
+      "as_of": "2025-09-04T12:10:22.027602Z"
+    },
+    {
+      "ticker": "FSLR",
+      "score": 0.7607,
+      "as_of": "2025-09-04T12:10:22.027605Z"
+    },
+    {
+      "ticker": "MSFT",
+      "score": 0.5085,
+      "as_of": "2025-09-04T12:10:22.027608Z"
+    },
+    {
+      "ticker": "BIDU",
+      "score": 0.7351,
+      "as_of": "2025-09-04T12:10:22.027610Z"
+    },
+    {
+      "ticker": "SE",
+      "score": 0.2749,
+      "as_of": "2025-09-04T12:10:22.027613Z"
+    },
+    {
+      "ticker": "ARM",
+      "score": 0.6491,
+      "as_of": "2025-09-04T12:10:22.027616Z"
+    },
+    {
+      "ticker": "AXP",
+      "score": 0.6656,
+      "as_of": "2025-09-04T12:10:22.027618Z"
+    },
+    {
+      "ticker": "MELI",
+      "score": 0.5656,
+      "as_of": "2025-09-04T12:10:22.027621Z"
+    },
+    {
+      "ticker": "COP",
+      "score": 0.819,
+      "as_of": "2025-09-04T12:10:22.027624Z"
+    },
+    {
+      "ticker": "PFE",
+      "score": 0.8334,
+      "as_of": "2025-09-04T12:10:22.027626Z"
+    },
+    {
+      "ticker": "TMO",
+      "score": 0.361,
+      "as_of": "2025-09-04T12:10:22.027629Z"
+    },
+    {
+      "ticker": "CRWD",
+      "score": 0.7553,
+      "as_of": "2025-09-04T12:10:22.027632Z"
+    },
+    {
+      "ticker": "SAP",
+      "score": 0.5944,
+      "as_of": "2025-09-04T12:10:22.027640Z"
+    },
+    {
+      "ticker": "CRM",
+      "score": 0.5184,
+      "as_of": "2025-09-04T12:10:22.027643Z"
+    },
+    {
+      "ticker": "NVO",
+      "score": 0.7236,
+      "as_of": "2025-09-04T12:10:22.027646Z"
+    },
+    {
+      "ticker": "DHR",
+      "score": 0.4707,
+      "as_of": "2025-09-04T12:10:22.027648Z"
+    },
+    {
+      "ticker": "PYPL",
+      "score": 0.8085,
+      "as_of": "2025-09-04T12:10:22.027651Z"
+    },
+    {
+      "ticker": "SBUX",
+      "score": 0.5361,
+      "as_of": "2025-09-04T12:10:22.027654Z"
+    },
+    {
+      "ticker": "ENVX",
+      "score": 0.7763,
+      "as_of": "2025-09-04T12:10:22.027656Z"
+    },
+    {
+      "ticker": "BABA",
+      "score": 0.7008,
+      "as_of": "2025-09-04T12:10:22.027659Z"
+    },
+    {
+      "ticker": "MA",
+      "score": 0.4743,
+      "as_of": "2025-09-04T12:10:22.027662Z"
+    },
+    {
+      "ticker": "SQ",
+      "score": 0.2808,
+      "as_of": "2025-09-04T12:10:22.027664Z"
+    },
+    {
+      "ticker": "HMC",
+      "score": 0.4332,
+      "as_of": "2025-09-04T12:10:22.027667Z"
+    },
+    {
+      "ticker": "SYK",
+      "score": 0.7514,
+      "as_of": "2025-09-04T12:10:22.027670Z"
+    },
+    {
+      "ticker": "LMT",
+      "score": 0.5975,
+      "as_of": "2025-09-04T12:10:22.027672Z"
+    },
+    {
+      "ticker": "T",
+      "score": 0.8878,
+      "as_of": "2025-09-04T12:10:22.027675Z"
+    },
+    {
+      "ticker": "DE",
+      "score": 0.7561,
+      "as_of": "2025-09-04T12:10:22.027678Z"
+    },
+    {
+      "ticker": "ASML",
+      "score": 0.2048,
+      "as_of": "2025-09-04T12:10:22.027680Z"
+    },
+    {
+      "ticker": "META",
+      "score": 0.8057,
+      "as_of": "2025-09-04T12:10:22.027683Z"
+    },
+    {
+      "ticker": "ADS.DE",
+      "score": 0.3377,
+      "as_of": "2025-09-04T12:10:22.027686Z"
+    },
+    {
+      "ticker": "TXN",
+      "score": 0.6368,
+      "as_of": "2025-09-04T12:10:22.027689Z"
+    },
+    {
+      "ticker": "NOW",
+      "score": 0.7701,
+      "as_of": "2025-09-04T12:10:22.027691Z"
+    },
+    {
+      "ticker": "MC.PA",
+      "score": 0.8632,
+      "as_of": "2025-09-04T12:10:22.027694Z"
+    },
+    {
+      "ticker": "SLB",
+      "score": 0.3276,
+      "as_of": "2025-09-04T12:10:22.027699Z"
+    },
+    {
+      "ticker": "S",
+      "score": 0.5267,
+      "as_of": "2025-09-04T12:10:22.027701Z"
+    },
+    {
+      "ticker": "BEP",
+      "score": 0.6074,
+      "as_of": "2025-09-04T12:10:22.027704Z"
+    },
+    {
+      "ticker": "UPS",
+      "score": 0.5548,
+      "as_of": "2025-09-04T12:10:22.027707Z"
+    },
+    {
+      "ticker": "TM",
+      "score": 0.8434,
+      "as_of": "2025-09-04T12:10:22.027709Z"
+    },
+    {
+      "ticker": "GE",
+      "score": 0.8924,
+      "as_of": "2025-09-04T12:10:22.027712Z"
+    },
+    {
+      "ticker": "TSMC",
+      "score": 0.8402,
+      "as_of": "2025-09-04T12:10:22.027714Z"
+    },
+    {
+      "ticker": "RIVN",
+      "score": 0.8509,
+      "as_of": "2025-09-04T12:10:22.027717Z"
+    },
+    {
+      "ticker": "TCEHY",
+      "score": 0.7863,
+      "as_of": "2025-09-04T12:10:22.027720Z"
+    },
+    {
+      "ticker": "UL",
+      "score": 0.5281,
+      "as_of": "2025-09-04T12:10:22.027723Z"
+    },
+    {
+      "ticker": "AMD",
+      "score": 0.8185,
+      "as_of": "2025-09-04T12:10:22.027727Z"
+    },
+    {
+      "ticker": "BA",
+      "score": 0.3398,
+      "as_of": "2025-09-04T12:10:22.027732Z"
+    },
+    {
+      "ticker": "OKTA",
+      "score": 0.8888,
+      "as_of": "2025-09-04T12:10:22.027734Z"
+    },
+    {
+      "ticker": "VUSA.DE",
+      "score": 0.3824,
+      "as_of": "2025-09-04T12:10:22.027737Z"
+    },
+    {
+      "ticker": "TSM",
+      "score": 0.4696,
+      "as_of": "2025-09-04T12:10:22.027740Z"
+    },
+    {
+      "ticker": "XOM",
+      "score": 0.6427,
+      "as_of": "2025-09-04T12:10:22.027742Z"
+    },
+    {
+      "ticker": "KO",
+      "score": 0.5758,
+      "as_of": "2025-09-04T12:10:22.027745Z"
+    },
+    {
+      "ticker": "SIE.DE",
+      "score": 0.7813,
+      "as_of": "2025-09-04T12:10:22.027748Z"
+    },
+    {
+      "ticker": "TSLA",
+      "score": 0.5277,
+      "as_of": "2025-09-04T12:10:22.027750Z"
+    },
+    {
+      "ticker": "V",
+      "score": 0.753,
+      "as_of": "2025-09-04T12:10:22.027754Z"
+    },
+    {
+      "ticker": "SEDG",
+      "score": 0.2667,
+      "as_of": "2025-09-04T12:10:22.027825Z"
+    },
+    {
+      "ticker": "IE00B66F4759",
+      "score": 0.8747,
+      "as_of": "2025-09-04T12:10:22.027828Z"
+    },
+    {
+      "ticker": "HON",
+      "score": 0.7266,
+      "as_of": "2025-09-04T12:10:22.027831Z"
+    },
+    {
+      "ticker": "WMT",
+      "score": 0.8985,
+      "as_of": "2025-09-04T12:10:22.027834Z"
+    },
+    {
+      "ticker": "SU.PA",
+      "score": 0.8452,
+      "as_of": "2025-09-04T12:10:22.027836Z"
+    },
+    {
+      "ticker": "QCOM",
+      "score": 0.408,
+      "as_of": "2025-09-04T12:10:22.027839Z"
+    },
+    {
+      "ticker": "PANW",
+      "score": 0.6624,
+      "as_of": "2025-09-04T12:10:22.027841Z"
+    },
+    {
+      "ticker": "ENPH",
+      "score": 0.7595,
+      "as_of": "2025-09-04T12:10:22.027844Z"
+    },
+    {
+      "ticker": "ISRG",
+      "score": 0.8277,
+      "as_of": "2025-09-04T12:10:22.027847Z"
+    },
+    {
+      "ticker": "NVDA",
+      "score": 0.8386,
+      "as_of": "2025-09-04T12:10:22.027849Z"
+    },
+    {
+      "ticker": "RTX",
+      "score": 0.2999,
+      "as_of": "2025-09-04T12:10:22.027852Z"
+    },
+    {
+      "ticker": "ZS",
+      "score": 0.3017,
+      "as_of": "2025-09-04T12:10:22.027854Z"
+    },
+    {
+      "ticker": "DDOG",
+      "score": 0.7663,
+      "as_of": "2025-09-04T12:10:22.027857Z"
+    },
+    {
+      "ticker": "COST",
+      "score": 0.6801,
+      "as_of": "2025-09-04T12:10:22.027860Z"
+    },
+    {
+      "ticker": "BP",
+      "score": 0.4188,
+      "as_of": "2025-09-04T12:10:22.027862Z"
+    },
+    {
+      "ticker": "MRK",
+      "score": 0.8574,
+      "as_of": "2025-09-04T12:10:22.027865Z"
+    },
+    {
+      "ticker": "AVGO",
+      "score": 0.7022,
+      "as_of": "2025-09-04T12:10:22.027868Z"
+    },
+    {
+      "ticker": "LLY",
+      "score": 0.4354,
+      "as_of": "2025-09-04T12:10:22.027871Z"
+    },
+    {
+      "ticker": "ADBE",
+      "score": 0.2468,
+      "as_of": "2025-09-04T12:10:22.027873Z"
+    },
+    {
+      "ticker": "JD",
+      "score": 0.63,
+      "as_of": "2025-09-04T12:10:22.027876Z"
+    },
+    {
+      "ticker": "ZBH",
+      "score": 0.471,
+      "as_of": "2025-09-04T12:10:22.027878Z"
+    },
+    {
+      "ticker": "INTC",
+      "score": 0.5615,
+      "as_of": "2025-09-04T12:10:22.027881Z"
+    },
+    {
+      "ticker": "ADI",
+      "score": 0.5177,
+      "as_of": "2025-09-04T12:10:22.027886Z"
+    },
+    {
+      "ticker": "CAT",
+      "score": 0.386,
+      "as_of": "2025-09-04T12:10:22.027889Z"
+    },
+    {
+      "ticker": "VUSD.DE",
+      "score": 0.5277,
+      "as_of": "2025-09-04T12:10:22.027891Z"
+    },
+    {
+      "ticker": "NESN.SW",
+      "score": 0.4322,
+      "as_of": "2025-09-04T12:10:22.027896Z"
+    },
+    {
+      "ticker": "MCD",
+      "score": 0.2746,
+      "as_of": "2025-09-04T12:10:22.027898Z"
+    },
+    {
+      "ticker": "ETSY",
+      "score": 0.436,
+      "as_of": "2025-09-04T12:10:22.027901Z"
+    },
+    {
+      "ticker": "MCHP",
+      "score": 0.5028,
+      "as_of": "2025-09-04T12:10:22.027904Z"
+    },
+    {
+      "ticker": "BMY",
+      "score": 0.5303,
+      "as_of": "2025-09-04T12:10:22.027906Z"
+    },
+    {
+      "ticker": "NOC",
+      "score": 0.5882,
+      "as_of": "2025-09-04T12:10:22.027911Z"
+    },
+    {
+      "ticker": "HAL",
+      "score": 0.6905,
+      "as_of": "2025-09-04T12:10:22.027913Z"
+    },
+    {
+      "ticker": "ASHR",
+      "score": 0.8449,
+      "as_of": "2025-09-04T12:10:22.027916Z"
+    },
+    {
+      "ticker": "MU",
+      "score": 0.2164,
+      "as_of": "2025-09-04T12:10:22.027919Z"
+    },
+    {
+      "ticker": "BAC",
+      "score": 0.2379,
+      "as_of": "2025-09-04T12:10:22.027921Z"
+    },
+    {
+      "ticker": "ORCL",
+      "score": 0.8992,
+      "as_of": "2025-09-04T12:10:22.027924Z"
+    },
+    {
+      "ticker": "C",
+      "score": 0.4015,
+      "as_of": "2025-09-04T12:10:22.027927Z"
+    },
+    {
+      "ticker": "SRT.DE",
+      "score": 0.2138,
+      "as_of": "2025-09-04T12:10:22.027929Z"
+    },
+    {
+      "ticker": "NTES",
+      "score": 0.8215,
+      "as_of": "2025-09-04T12:10:22.027932Z"
+    },
+    {
+      "ticker": "AAPL",
+      "score": 0.6982,
+      "as_of": "2025-09-04T12:10:22.027935Z"
+    },
+    {
+      "ticker": "PEP",
+      "score": 0.691,
+      "as_of": "2025-09-04T12:10:22.027937Z"
+    },
+    {
+      "ticker": "SHOP",
+      "score": 0.6809,
+      "as_of": "2025-09-04T12:10:22.027940Z"
+    }
+  ]
 }
