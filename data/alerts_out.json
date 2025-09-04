@@ -1,22 +1,44 @@
 {
-  "meta": {
-    "timestamp_cet": "INIT",
-    "source": "tools/run_alerts.py",
-    "config": {
-      "dual_layer": "",
-      "debounce_seconds": 120,
-      "volume_min_x": 1.3,
-      "volume_spike_x": 1.5,
-      "fx_tolerance": 0.002
-    }
-  },
-  "mars": {
+  "Mars": {
     "alerts": []
   },
-  "venus": {
+  "Venus": {
     "alerts": []
   },
   "family": {
-    "alerts": []
+    "alerts": [
+      {
+        "topic": "family_risk",
+        "what": "Family P&L-Wächter aktiv (Limits dd_family -0.025 / dd_sub -0.035)",
+        "score": 50,
+        "confidence": 2,
+        "variant_A": "A: nur beobachten",
+        "variant_B": "B: Re-Check bei starken Indexbewegungen"
+      },
+      {
+        "topic": "exposure_guard",
+        "what": "Exposure-Limit ~95% – bei rotem Markt de-risk",
+        "score": 55,
+        "confidence": 2,
+        "variant_A": "A: keine Aktion",
+        "variant_B": "B: Mini-Trim in stärksten Gewinnern"
+      },
+      {
+        "topic": "cluster_nvda",
+        "what": "NVDA-Cluster Max 20%, Trim bevorzugt in venus",
+        "score": 60,
+        "confidence": 3,
+        "variant_A": "A: nur Hinweis",
+        "variant_B": "B: bei Signal Tranche in bevorzugtem Depot"
+      },
+      {
+        "topic": "corr_ndx",
+        "what": "Korrelation-Wächter vs. NDX > 90% → diversify_hint",
+        "score": 55,
+        "confidence": 2,
+        "variant_A": "A: halten",
+        "variant_B": "B: Diversifikation prüfen"
+      }
+    ]
   }
 }
