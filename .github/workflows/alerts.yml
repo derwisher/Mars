@@ -60,7 +60,7 @@ jobs:
           echo "===== docs/alerts.json (erste 40) ====="
           head -n 40 docs/alerts.json || true
 
-      # ---- Brief rendern (Renderer oder Fallback-HereDoc) ----
+      # ---- Brief rendern (externer Renderer ODER sicherer Inline-Fallback) ----
       - name: Render Markdown Brief
         shell: bash
         run: |
@@ -68,8 +68,7 @@ jobs:
           if [ -f tools/render_alerts_md.py ]; then
             python tools/render_alerts_md.py
           else
-            # Fallback: Python-HereDoc
-            cat > /tmp/render_alerts.py <<'PY'
+            python - <<'PY'
 import json, pathlib, datetime
 
 p = pathlib.Path("docs/alerts.json")
@@ -98,7 +97,6 @@ for sec in ("mars", "venus", "family"):
 
 pathlib.Path("docs/alerts_brief.md").write_text("\n".join(lines), encoding="utf-8")
 PY
-            python /tmp/render_alerts.py
           fi
 
       - name: Preview docs/alerts_brief.md
@@ -157,3 +155,4 @@ PY
             -d "chat_id=${TG_CHAT}" \
             --data-urlencode text@/tmp/tg_msg.txt \
             >/dev/null || true
+
