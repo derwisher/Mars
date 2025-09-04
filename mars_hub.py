@@ -1,65 +1,47 @@
-#!/usr/bin/env python3
-import os
-import json
-from datetime import datetime
-from pathlib import Path
-import random
+name: Mars CI
 
-# === Konfiguration ===
-DATA_DIR = Path("data")
-TOPPRIOR_FILE = DATA_DIR / "universe_topprior.txt"
-CORE_FILE = DATA_DIR / "universe_core.txt"
+on:
+  schedule:
+    - cron: "0 * * * *"      # jede volle Stunde
+    - cron: "0 12 * * *"     # täglich 12:00
+    - cron: "0 17 * * *"     # täglich 17:00
+  workflow_dispatch: {}
 
-# === Hilfsfunktionen ===
-def load_universe(file_path):
-    tickers = []
-    if file_path.exists():
-        with open(file_path, "r") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                # nur Ticker, Kommentare hinten abschneiden
-                tickers.append(line.split()[0])
-    return tickers
+permissions:
+  contents: write
 
-def rotate_universe(universe, slots=4, max_n=200):
-    """Teilt Universe in Slots und zieht max. n Ticker pro Lauf"""
-    if not universe:
-        return []
+jobs:
+  run:
+    runs-on: ubuntu-latest
 
-    # Shuffle für Rotation
-    random.shuffle(universe)
+    env:
+      ROTATION_SLOTS: "6"
+      MAX_UNIVERSE: "200"
 
-    # Slots: gleichmäßige Aufteilung
-    slot_size = max(1, len(universe) // slots)
-    chosen = universe[:slots * slot_size]
+    steps:
+      - uses: actions/checkout@v4
 
-    # Begrenzung max_n
-    return chosen[:max_n]
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-# === Umgebungsvariablen ===
-SLOTS = int(os.getenv("ROTATION_SLOTS", "4"))
-MAX_N = int(os.getenv("MAX_UNIVERSE", "200"))
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-# === Universe laden ===
-tickers_top = load_universe(TOPPRIOR_FILE)
-tickers_core = load_universe(CORE_FILE)
+      # ⬇️ Hier: mars_hub.py direkt ausführen und Ausgabe als alerts.json speichern
+      - name: Generate alerts.json
+        run: |
+          python mars_hub.py > alerts.json
 
-universe = tickers_top + tickers_core
-universe = list(set(universe))  # Duplikate entfernen
-
-# === Rotation anwenden ===
-selected = rotate_universe(universe, slots=SLOTS, max_n=MAX_N)
-
-# === Dummy-Scores (Platzhalter für echte Analyse/Scoring) ===
-alerts = []
-for t in selected:
-    alerts.append({
-        "ticker": t,
-        "score": round(random.uniform(0.2, 0.9), 4),
-        "as_of": datetime.utcnow().isoformat() + "Z"
-    })
-
-# === Output als JSON ===
-print(json.dumps({"alerts_today": alerts}, indent=2))
+      - name: Publish alerts.json to docs (with robots.txt)
+        run: |
+          mkdir -p docs
+          cp alerts.json docs/alerts.json
+          echo "User-agent: *" > docs/robots.txt
+          echo "Disallow: /" >> docs/robots.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/alerts.json docs/robots.txt || true
+          git commit -m "update alerts" || echo "no changes"
+          git push
