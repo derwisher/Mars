@@ -16,22 +16,23 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
       - name: Run Mars Hub
-        run: python mars_hub.py
+        run: python tools/mars_hub.py
 
       - name: Save alerts.json
         run: |
           mkdir -p docs
-          cp alerts.json docs/
+          cp data/alerts_out.json docs/alerts.json
+
       - name: Commit and push results
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/alerts.json
-          git commit -m "Update alerts.json"
+          git commit -m "Update alerts.json" || echo "No changes to commit"
           git push
