@@ -1,0 +1,62 @@
+name: Mars Alerts Hourly
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # stündlich Mo–Fr, jeweils Minute 5 (UTC) → deckt CET/CEST stündlich ab
+    - cron: '5 * * * 1-5'
+
+permissions:
+  contents: write   # Brief & JSON committen
+  actions: read
+  id-token: write
+
+concurrency:
+  group: alerts-hourly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  alerts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          # requirements.txt ist optional – fehlende Datei ist ok
+          [ -f requirements.txt ] && pip install -r requirements.txt || true
+
+      # 1) Engine: erstellt data/alerts_out.json anhand deiner Regeln/Kurse
+      - name: Run Alert Engine
+        run: |
+          python tools/run_alerts.py
+
+      # 2) Brief rendern (Markdown) → docs/alerts_brief.md
+      - name: Render Alerts Brief (Markdown)
+        run: |
+          python tools/render_alerts_md.py
+
+      # 3) Änderungen committen (nur wenn sich was geändert hat)
+      - name: Commit & push brief + json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/alerts_brief.md data/alerts_out.json || true
+          git diff --cached --quiet || git commit -m "alerts: brief $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
+
+      # 4) Telegram: nur senden, wenn echte Alerts vorhanden sind
+      - name: Notify Telegram (only on alerts)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python tools/notify_telegram.py
