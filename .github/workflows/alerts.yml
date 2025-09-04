@@ -1,9 +1,9 @@
-name: Alerts & Brief (Mars/Venus)
+name: Alerts & Brief (mars/venus)
 
 on:
   schedule:
-    - cron: "6 * * * *"           # stündlich Minute 06 (UTC)
-  workflow_dispatch: {}           # manuell auslösbar
+    - cron: "6 * * * *"   # stündlich Minute 06 (UTC)
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -16,13 +16,11 @@ jobs:
   alerts:
     runs-on: ubuntu-latest
     steps:
-      # --- Checkout ---
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # --- Python ---
       - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -34,9 +32,10 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      # --- DST-Gate Berlin (nur 07/12/17) ---
-      - name: Time gate (Europe/Berlin → 07/12/17 only)
+      # ---- Time gate: nur 07/12/17 Europe/Berlin ----
+      - name: Time gate (Europe/Berlin → 07/12/17)
         id: timegate
+        shell: bash
         run: |
           TZ=Europe/Berlin
           HOUR=$(TZ=$TZ date +%H)
@@ -48,28 +47,22 @@ jobs:
 
       - name: Stop if not scheduled Berlin hour
         if: steps.timegate.outputs.continue == 'false'
-        run: echo "Skipping alerts (not 07/12/17 Berlin time)." && exit 0
+        run: echo "Skipping alerts (not 07/12/17 Berlin)." && exit 0
 
-      # --- Live-Kurse / Snapshot (EUR) ---
-      - name: Pull live prices (EUR snapshot)
-        run: |
-          python tools/live_data.py
-          echo "===== data/prices_eur_snapshot.csv (Top 10) ====="
-          sed -n '1,10p' data/prices_eur_snapshot.csv || true
-
-      # --- Alert-Engine (schreibt docs/alerts.json + data/alerts_out.json) ---
-      - name: Run Alert Engine
+      # ---- Engine erneut laufen lassen (schreibt docs/alerts.json) ----
+      - name: Run alert engine
+        shell: bash
         run: |
           mkdir -p docs
           python tools/run_alerts.py
           if [ ! -f docs/alerts.json ]; then
-            echo "❌ docs/alerts.json fehlt – Engine hat nichts geschrieben."
+            echo "✖ docs/alerts.json fehlt – Engine hat nichts geschrieben."
             exit 2
           fi
           echo "===== docs/alerts.json (erste 40) ====="
           sed -n '1,40p' docs/alerts.json || true
 
-      # --- Brief rendern (externer Renderer oder Fallback in Tempdatei) ---
+      # ---- Brief rendern: externer Renderer oder Fallback-Here-Doc ----
       - name: Render Markdown Brief
         shell: bash
         run: |
@@ -77,6 +70,7 @@ jobs:
           if [ -f tools/render_alerts_md.py ]; then
             python tools/render_alerts_md.py
           else
+            # Fallback-Renderer in Tempdatei schreiben und ausführen
             cat > /tmp/render_alerts.py <<'PY'
 import json, pathlib, datetime
 
@@ -90,7 +84,7 @@ except Exception:
 ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 lines = [f"# Alerts Brief — {ts}", ""]
 
-for sec in ("mars","venus","family"):
+for sec in ("mars", "venus", "family"):
     lines.append(f"## {sec}")
     alerts = (data.get(sec) or {}).get("alerts", [])
     if not alerts:
@@ -98,8 +92,8 @@ for sec in ("mars","venus","family"):
         continue
     for a in alerts[:10]:
         topic = a.get("ticker") or a.get("topic") or "?"
-        sc = a.get("score","?")
-        cf = a.get("confidence","?")
+        sc = a.get("score", "?")
+        cf = a.get("confidence", "?")
         what = (a.get("what") or "").strip()
         lines.append(f"- **{topic}** — Score {sc} | Confidence {cf}\n  {what}")
     lines.append("")
@@ -114,8 +108,9 @@ PY
           echo "===== docs/alerts_brief.md (erste 80) ====="
           head -n 80 docs/alerts_brief.md || true
 
-      # --- Commit & Push (force im CI, nur wenn Änderungen) ---
+      # ---- Commit & Push (force im CI) ----
       - name: Commit & Push Brief + JSON
+        shell: bash
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -127,16 +122,17 @@ PY
             git push origin HEAD:main --force
           fi
 
-      # --- Telegram nur bei Alerts + erste 10 JSON-Zeilen ---
+      # ---- Telegram nur wenn Alerts vorhanden ----
       - name: Telegram Notify (nur wenn Alerts vorhanden)
         if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
           RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
         run: |
-          python <<'PY'
-import json, pathlib
+          python - <<'PY'
+import json, pathlib, sys
 p = pathlib.Path("docs/alerts.json")
 has = False
 try:
@@ -151,11 +147,11 @@ except Exception:
 open("/tmp/has.flag","w").write("1" if has else "0")
 PY
           if [ "$(cat /tmp/has.flag)" != "1" ]; then
-            echo "ℹ️ Keine Alerts – Telegram wird übersprungen."
+            echo "ℹ️  Keine Alerts – Telegram wird übersprungen."
             exit 0
           fi
           {
-            echo "🚨 Alerts-Run (Mars/Venus) – Details:"
+            echo "🚨 Alerts-Run (mars/venus) – Details:"
             echo "${RUN_URL}"
             echo ""
             echo "--- Erste Zeilen aus docs/alerts.json ---"
