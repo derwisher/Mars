@@ -8,7 +8,10 @@ def main():
         "family":      {"alerts": run_alerts("family")}
     }
     print(json.dumps(out, ensure_ascii=False, indent=2))
-    with open("../data/alerts_out.json","w",encoding="utf-8") as f:
+    from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]
+out_path = ROOT / "data" / "alerts_out.json"
+with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
