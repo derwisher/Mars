@@ -1,71 +1,59 @@
-name: MARS CI MAIN
+name: Mars CI – MAIN
 
 on:
   schedule:
-    - cron: '0 * * * *'     # jede volle Stunde
-    - cron: '0 12 * * *'    # täglich 12:00
-    - cron: '0 17 * * *'    # täglich 17:00
-  workflow_dispatch:
+    - cron: "2 * * * *"      # stündlich zur Minute 02 (UTC)
+    - cron: "0 12 * * *"     # täglich 12:00 UTC
+    - cron: "0 17 * * *"     # täglich 17:00 UTC
+  workflow_dispatch: {}
 
-# verhindert gleichzeitige Writer-Jobs auf derselben Branch
+permissions:
+  contents: write
+
 concurrency:
-  group: publish-docs-${{ github.ref }}
+  group: main-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   run:
     runs-on: ubuntu-latest
-
     steps:
-      # 1) Checkout mit kompletter Historie
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
           fetch-depth: 0
 
-      # 2) Python einrichten
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
-      # 3) Abhängigkeiten installieren
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
 
-      # 4) Alerts erzeugen → direkt in docs/alerts.json schreiben
       - name: Generate docs/alerts.json (via mars_hub.py)
         run: |
           mkdir -p docs
+          # mars_hub.py schreibt JSON auf STDOUT → in Datei umleiten
           python mars_hub.py > docs/alerts.json
 
-      # (optional) Erste Zeilen zeigen – gut fürs Debugging
       - name: Preview first lines of docs/alerts.json
-        run: sed -n '1,120p' docs/alerts.json || true
-
-      # 5) Sicher committen & pushen (mit Rebase davor)
-      - name: Commit & push docs/alerts.json
-        env:
-          BRANCH: ${{ github.ref_name }}
         run: |
-          set -e
+          sed -n '1,60p' docs/alerts.json || true
+
+      # --- Force-Push Commit-Flow (vermeidet Rebase/Merge-Fails im CI) ---
+      - name: Commit & push docs/alerts.json
+        run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/alerts.json || true
 
-          # Sanity
-          test -f docs/alerts.json
-
-          # Gegen aktuellen Remote-Stand rebasen (vermeidet "fetch first")
-          git fetch origin "$BRANCH"
-          git rebase origin/"$BRANCH" || git rebase --abort
-
-          # Nur committen, wenn sich wirklich was geändert hat
-          git add docs/alerts.json
           if git diff --cached --quiet; then
-            echo "Keine Änderungen an docs/alerts.json – Commit/Push übersprungen."
+            echo "Keine Änderungen zu committen."
           else
-            git commit -m "CI: update alerts.json ($(date -u +'%Y-%m-%dT%H:%MZ'))"
-            # Fast-forward Push (bei sehr seltenen Kollisionen ggf. mit --force-with-lease)
-            git push origin HEAD:"$BRANCH"
+            git commit -m "CI(main): update alerts.json ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            git push origin HEAD:main --force
           fi
