@@ -1,9 +1,8 @@
-name: Alerts (Mars/Venus)
+name: Alerts & Brief
 
 on:
-  workflow_dispatch: {}   # manueller Start-Button
-  schedule:
-    # UTC-Cron: wir decken CET & CEST ab (ein Tick mehr ist ok)
+  workflow_dispatch: {}     # manueller Start
+  schedule:                 # UTC Zeiten (decken CET/CEST ab)
     - cron: '0 5 * * 1-5'   # 06:00 CET / 07:00 CEST
     - cron: '0 6 * * 1-5'   # 07:00 CET
     - cron: '0 10 * * 1-5'  # 11:00 CET / 12:00 CEST
@@ -11,58 +10,53 @@ on:
     - cron: '0 15 * * 1-5'  # 16:00 CET / 17:00 CEST
     - cron: '0 16 * * 1-5'  # 17:00 CET
 
-jobs:
-  run-alerts:       name: Render Markdown brief
-        run: |
-          python3 tools/render_alerts_md.py
+permissions:
+  contents: write
+  actions: read
+  id-token: write
 
-      - name: Commit & push brief
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/alerts_brief.md
-          git commit -m "alerts: brief $(date -u +'%Y-%m-%dT%H:%M:%SZ')" || echo "nichts zu committen"
-          git push
+concurrency:
+  group: alerts-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  alerts:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write           # wir committen das Ergebnis ins Repo
-      actions: read
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
-      - name: Install requirements
+      - name: Install deps (optional)
         run: |
-          python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Run alerts engine
+      - name: Run alert engine (JSON)
         run: |
           python3 tools/run_alerts.py
+          test -f data/alerts_out.json && jq . data/alerts_out.json | head -n 60 || true
 
-      - name: Kopiere Ergebnis für Doku
+      - name: Render Markdown Brief
         run: |
-          mkdir -p docs
-          cp -f data/alerts_out.json docs/alerts.json
+          python3 tools/render_alerts_md.py
+          test -f docs/alerts_brief.md && head -n 60 docs/alerts_brief.md || true
 
-      - name: Commit & push results
+      - name: Commit & push Brief + JSON
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/alerts_out.json docs/alerts.json
-          git commit -m "alerts: update $(date -u +'%Y-%m-%dT%H:%M:%SZ')" || echo "nichts zu committen"
-          git push
+          git add docs/alerts_brief.md data/alerts_out.json || true
+          git commit -m "alerts: brief $(date -u +'%Y-%m-%dT%H:%M:%SZ')" || echo "nichts zu committen"
+          git push || true
 
-      - name: Upload artifact (Download in Actions)
+      - name: Upload artifact (Brief)
         uses: actions/upload-artifact@v4
         with:
-          name: alerts-json
+          name: alerts_brief
           path: |
+            docs/alerts_brief.md
             data/alerts_out.json
-            docs/alerts.json
