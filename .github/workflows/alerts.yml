@@ -12,7 +12,7 @@ on:
     - cron: '0 16 * * 1-5'  # 17:00 CET
 
 jobs:
-  run-alerts:       - name: Render Markdown brief
+  run-alerts:       name: Render Markdown brief
         run: |
           python3 tools/render_alerts_md.py
 
