@@ -48,19 +48,19 @@ jobs:
         if: steps.timegate.outputs.continue == 'false'
         run: echo "Skipping alerts brief (not 07/12/17 Berlin)." && exit 0
 
-      # ---- Engine laufen lassen ----
+      # ---- Engine: schreibt docs/alerts.json + data/alerts_out.json ----
       - name: Run Alert Engine
         run: |
           mkdir -p docs
           python tools/run_alerts.py
           if [ ! -f docs/alerts.json ]; then
-            echo "❌ docs/alerts.json fehlt – Engine hat nichts erzeugt"
+            echo "❌ docs/alerts.json fehlt – Engine hat nichts erzeugt!"
             exit 2
           fi
           echo "===== docs/alerts.json (erste 40) ====="
-          head -n 40 docs/alerts.json || true
+          sed -n '1,40p' docs/alerts.json || true
 
-      # ---- Brief rendern (externer Renderer ODER sicherer Inline-Fallback) ----
+      # ---- Brief rendern (Renderer oder Fallback) ----
       - name: Render Markdown Brief
         shell: bash
         run: |
@@ -68,7 +68,7 @@ jobs:
           if [ -f tools/render_alerts_md.py ]; then
             python tools/render_alerts_md.py
           else
-            python - <<'PY'
+            python <<'PY'
 import json, pathlib, datetime
 
 p = pathlib.Path("docs/alerts.json")
@@ -109,15 +109,15 @@ PY
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/alerts_brief.md || true
+          git add docs/alerts.json docs/alerts_brief.md || true
           if git diff --cached --quiet; then
             echo "Keine Änderungen zu committen."
           else
-            git commit -m "CI(alerts): update alerts_brief.md ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            git commit -m "CI(alerts): update alerts.json + brief ($(date -u +'%Y-%m-%dT%H:%MZ'))"
             git push origin HEAD:main --force
           fi
 
-      # ---- Telegram nur bei Alerts ----
+      # ---- Telegram nur wenn Alerts ----
       - name: Telegram Notify (nur wenn Alerts vorhanden)
         if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
         env:
@@ -125,8 +125,8 @@ PY
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
           RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          python - <<'PY'
-import json, pathlib
+          python <<'PY'
+import json, pathlib, sys
 p = pathlib.Path("docs/alerts.json")
 has = False
 try:
@@ -155,4 +155,3 @@ PY
             -d "chat_id=${TG_CHAT}" \
             --data-urlencode text@/tmp/tg_msg.txt \
             >/dev/null || true
-
