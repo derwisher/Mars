@@ -2,7 +2,9 @@ name: Mars CI
 
 on:
   schedule:
-    - cron: "0,30 * * * *"     # alle 30 Minuten
+    - cron: "0 * * * *"      # jede volle Stunde
+    - cron: "0 12 * * *"     # täglich 12:00
+    - cron: "0 17 * * *"     # täglich 17:00
   workflow_dispatch: {}
 
 permissions:
@@ -12,10 +14,9 @@ jobs:
   run:
     runs-on: ubuntu-latest
 
-    # Umgebungsvariablen für Rotation/Umfang je Lauf
     env:
-      ROTATION_SLOTS: "6"      # Anzahl Rotations-Segmente (z.B. 4/6/8)
-      MAX_UNIVERSE: "200"      # max. Ticker pro Lauf (200 ist stabil)
+      ROTATION_SLOTS: "6"
+      MAX_UNIVERSE: "200"
 
     steps:
       - name: Checkout
@@ -29,8 +30,10 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt
 
+      # WICHTIG: mars_hub.py direkt ausführen (nicht run_report_json.py)
       - name: Generate alerts.json
-        run: python run_report_json.py > alerts.json
+        run: |
+          python mars_hub.py > alerts.json
 
       - name: Publish alerts.json to docs (with robots.txt)
         run: |
