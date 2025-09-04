@@ -34,6 +34,14 @@ jobs:
             pip install -r requirements.txt
           fi
 
+      # >>> NEU: Live-Kurse ziehen (schreibt data/prices_eur_snapshot.csv)
+      - name: Pull live prices (EUR snapshot)
+        run: |
+          python tools/live_data.py
+          echo "===== prices_eur_snapshot.csv (Top 10 Zeilen) ====="
+          sed -n '1,10p' data/prices_eur_snapshot.csv || true
+      # <<<
+
       - name: Generate docs/alerts.json (via mars_hub.py)
         run: |
           mkdir -p docs
@@ -50,7 +58,6 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/alerts.json || true
-
           if git diff --cached --quiet; then
             echo "Keine Änderungen zu committen."
           else
