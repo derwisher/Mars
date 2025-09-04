@@ -1,0 +1,16 @@
+name: Telegram Chat-ID ermitteln
+on: { workflow_dispatch: {} }
+
+jobs:
+  find-chat-id:
+    runs-on: ubuntu-latest
+    steps:
+      - name: getUpdates (zeige chat.id)
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::${TOKEN}"
+          curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | tee updates.json
+          echo
+          echo "Hinweis: Suche in der Ausgabe nach \"message.chat.id\" – das ist die Zahl für TELEGRAM_CHAT_ID."
