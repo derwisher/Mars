@@ -1,13 +1,38 @@
 {
-  "mars": {
-    "active": ["MSFT","GOOGL","AMZN","TSMC","DDOG","SNOW","ARM","MPWR","SHOP","SE","CRWD","SU.PA","VRT","CPNG","ENVX"],
-    "inactive": ["NVDA"]
+  "version": "1.0",
+  "session_only": true,
+  "fx_tolerance": 0.002,
+  "debounce_seconds": 120,
+  "min_move_eur_low_price": 0.40,
+
+  "family": {
+    "pnl_risk":  { "all_dd": -0.025, "portfolio_b_dd": -0.035 },
+    "exposure":  { "max_invested": 0.95, "min_cash": 0.05 },
+    "cluster":   { "nvda_family_max": 0.20 },
+    "correlation": { "ndx_threshold": 0.90 }
   },
-  "venus": {
-    "active": ["MSFT","AMZN","ASML","LLY","NVO","BEP","VUSA.DE"],
-    "inactive": ["NVDA","PLTR","LMT","NFLX","DTG.DE","JKS","ADS.DE","SRT.DE","WOLF","VUSD.DE","IE00B4L5Y983","IE00B66F4759"]
+
+  "portfolio_a": {
+    "universe": ["MSFT","AMZN","GOOGL","TSM","MPWR","SNOW","DDOG","ARM","SHOP","SE","CRWD","SU","VRT","ENVX","CPNG","NVDA"],
+    "core_growth": { "trim_down_5d": -0.12, "tp_up_intraday": 0.12, "dte_close_dma50": true },
+    "satellites": {
+      "CRWD": { "add_vs_entry_pct": -0.10 },
+      "SU":   { "add_below_eur": 205.00, "stop_orient_eur": 200.00 },
+      "VRT":  { "add_below_eur": 100.00, "stop_orient_eur": 95.00 }
+    },
+    "nvda": { "fail_safe_intraday": -0.12, "fail_safe_close_low5": true },
+    "moonshots": { "intraday_down": -0.15, "vs5d_down": -0.25, "volume_x": 1.5 }
   },
-  "notgroschen": {
-    "active": ["FT ICAV-FTSE CHN ETF DLA","V.S+P500 U.ETF DLA"]
+
+  "portfolio_b": {
+    "universe_ist": [
+      "NVDA","MSFT","AMZN","NFLX","PLTR","ADS","SRT","JKS",
+      "ENVX","DT","LMT","WOLF","ENV","VOO","MSCIWORLD","SP500_DIST","SML600"
+    ],
+    "universe_soll": ["ASML","LLY","NVO","PEP","VOO","BEPC"],
+    "nvda_tranches": { "t1_pct": 0.25, "t1_close_low5": true, "t1_intraday": -0.06,
+                       "t2_pct": 0.10, "t2_close_dma50": true, "t2_pivot_break": true },
+    "restpositions": { "no_dca": true, "hard_break_only": true },
+    "add_dips_soll": { "dip_low": -0.05, "dip_high": -0.03 }
   }
 }
