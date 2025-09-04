@@ -1,37 +1,23 @@
+# tools/run_alerts.py
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
 tools/run_alerts.py
-- lädt alerts_engine robust (lokal & CI)
-- schreibt docs/alerts.json + data/alerts_out.json
-- druckt JSON auf STDOUT
+Erzeugt die Alert-Ausgabe für mars / venus / family auf Basis von data/alerts_config.json
+- nutzt die Engine in tools/alerts_engine.py
+- schreibt nach docs/alerts.json (für den Report-Workflow)
+- spiegelt zusätzlich nach data/alerts_out.json (Debug/Archiv)
+- gibt das JSON auch auf STDOUT aus (für Logs)
 """
 
 from __future__ import annotations
 import json
-import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
-# --------------------------------------------------------------------
-# Robust laden: zuerst Paket-Import, dann Fallback via PYTHONPATH
-# --------------------------------------------------------------------
-ae = None
-try:
-    # klappt, wenn 'tools' als Paket erkannt wird
-    from tools import alerts_engine as ae  # type: ignore
-except ModuleNotFoundError:
-    ROOT = Path(__file__).resolve().parents[1]
-    sys.path.insert(0, str(ROOT / "tools"))
-    import alerts_engine as ae  # type: ignore
-
-# defensive: sicherstellen, dass run_alerts vorhanden ist
-if not hasattr(ae, "run_alerts"):
-    raise RuntimeError(f"alerts_engine geladen aus {getattr(ae, '__file__', '?')}, "
-                       f"aber ohne run_alerts(). Bitte Datei prüfen.")
-
-run_alerts = ae.run_alerts  # Alias
+# Import aus unserer Engine
+from tools.alerts_engine import run_alerts
 
 
 def load_config(cfg_path: Path) -> dict:
@@ -42,21 +28,23 @@ def load_config(cfg_path: Path) -> dict:
 
 
 def main() -> None:
-    ROOT = Path(__file__).resolve().parents[1]  # /…/Mars
+    # Projekt-Root
+    ROOT = Path(__file__).resolve().parents[1]
     data_dir = ROOT / "data"
     docs_dir = ROOT / "docs"
 
     cfg_path = data_dir / "alerts_config.json"
-    out_data = data_dir / "alerts_out.json"
-    out_docs = docs_dir / "alerts.json"
+    out_data = data_dir / "alerts_out.json"   # Debug/Archiv
+    out_docs = docs_dir / "alerts.json"       # CI/Reports
 
     cfg = load_config(cfg_path)
 
-    # Konfig-Bäume (klein geschrieben)
+    # Konfig-Bäume (klein geschrieben, wie vereinbart)
     cfg_mars   = cfg.get("mars",   {})
     cfg_venus  = cfg.get("venus",  {})
     cfg_family = cfg.get("family", {})
 
+    # Engine ausführen
     result = {
         "as_of_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "mars":   {"alerts": run_alerts("mars",   cfg_mars)},
@@ -64,15 +52,19 @@ def main() -> None:
         "family": {"alerts": run_alerts("family", cfg_family)},
     }
 
+    # Verzeichnisse sicherstellen
     docs_dir.mkdir(parents=True, exist_ok=True)
     data_dir.mkdir(parents=True, exist_ok=True)
 
+    # 1) in docs/alerts.json (für Reports)
     with out_docs.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
+    # 2) zusätzlich nach data/alerts_out.json (Debug)
     with out_data.open("w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
+    # 3) für Logs → stdout
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
