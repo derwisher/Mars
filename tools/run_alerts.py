@@ -3,10 +3,10 @@
 
 """
 tools/run_alerts.py
-Kombinierte, robuste Fassung:
-- keine Klarnamen (nur 'mars', 'venus', 'family')
-- kompatible Imports (alerts_engine nebenan ODER in tools/)
-- sauberer JSON-Preview und Output nach data/alerts_out.json
+- keine Klarnamen: 'mars' (TR/LS), 'venus' (ING/Xetra), 'family'
+- robust: Pfade mit pathlib, schreibt nach data/alerts_out.json
+- lädt config aus data/alerts_config.json
+- ruft Engine (alerts_engine.run_alerts) je Bereich auf
 """
 
 from __future__ import annotations
@@ -15,21 +15,25 @@ from datetime import datetime, timezone
 import json
 import sys
 
-# ------------------------------------------------------------
-# Import-Strategie: zuerst lokal (gleiches Verzeichnis), dann tools/
-# ------------------------------------------------------------
-_run_alerts_func = None
+ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = ROOT / "data"
+CFG_PATH = DATA_DIR / "alerts_config.json"
+OUT_PATH = DATA_DIR / "alerts_out.json"
+
+# Engine-Import robust halten
+_run_alerts = None
 try:
-    from alerts_engine import run_alerts as _run_alerts_func  # wenn Script in tools/ läuft
+    from alerts_engine import run_alerts as _run_alerts  # wenn Script direkt in tools/ importierbar
 except Exception:
     try:
-        from tools.alerts_engine import run_alerts as _run_alerts_func  # falls Paket-Import
+        from tools.alerts_engine import run_alerts as _run_alerts  # falls Paketpfad notwendig
     except Exception as e:
         sys.stderr.write(f"[warn] alerts_engine import failed: {e}\n")
-        _run_alerts_func = None
+        _run_alerts = None
 
-def _engine_fallback(name: str) -> list:
-    """Failsafe: wenn Engine nicht importierbar oder crasht, liefern wir leere Alerts."""
+
+def _fallback(name: str) -> list:
+    """Failsafe-Payload, falls Engine fehlt/fehlschlägt."""
     return [{
         "portfolio": name,
         "note": "engine_fallback_noop",
@@ -37,63 +41,65 @@ def _engine_fallback(name: str) -> list:
         "alerts": []
     }]
 
-def _run_engine(name: str) -> list:
-    """Versucht, run_alerts(name[, cfg]) aufzurufen, sonst Fallback."""
-    if _run_alerts_func is None:
-        return _engine_fallback(name)
-    # 1) übliche Signatur: run_alerts("mars")
-    try:
-        return _run_alerts_func(name)
-    except TypeError:
-        # 2) alternative Signatur: run_alerts("mars", cfg_dict) – wir geben None, Engine liest selbst
-        try:
-            return _run_alerts_func(name, None)
-        except Exception as e:
-            sys.stderr.write(f"[warn] alerts_engine runtime failed ({name}): {e}\n")
-            return _engine_fallback(name)
-    except Exception as e:
-        sys.stderr.write(f"[warn] alerts_engine runtime failed ({name}): {e}\n")
-        return _engine_fallback(name)
 
-# ------------------------------------------------------------
-# Pfade
-# ------------------------------------------------------------
-ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "data"
-OUT_PATH = DATA_DIR / "alerts_out.json"
+def _call_engine(name: str, cfg: dict) -> list:
+    """Engine sicher aufrufen (verschiedene Signaturen tolerieren)."""
+    if _run_alerts is None:
+        return _fallback(name)
+    try:
+        # bevorzugt: run_alerts(name, cfg)
+        return _run_alerts(name, cfg)
+    except TypeError:
+        # alternative: run_alerts(name)
+        try:
+            return _run_alerts(name)
+        except Exception as e:
+            sys.stderr.write(f"[warn] engine runtime failed ({name}): {e}\n")
+            return _fallback(name)
+    except Exception as e:
+        sys.stderr.write(f"[warn] engine runtime failed ({name}): {e}\n")
+        return _fallback(name)
+
 
 def main() -> None:
-    # Engine für mars/venus/family ausführen
-    res_mars   = _run_engine("mars")
-    res_venus  = _run_engine("venus")
-    res_family = _run_engine("family")
+    # Config laden
+    try:
+        cfg = json.loads(CFG_PATH.read_text(encoding="utf-8"))
+    except Exception as e:
+        sys.stderr.write(f"[error] cannot read config {CFG_PATH}: {e}\n")
+        cfg = {}
 
-    # Meta + Ergebnis strukturieren
+    # Engine je Bereich
+    res_mars   = _call_engine("mars", cfg.get("mars", {}))
+    res_venus  = _call_engine("venus", cfg.get("venus", {}))
+    res_family = _call_engine("family", cfg.get("family", {}))
+
+    # Meta + Ergebnis
     ts_cet = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
     result = {
         "meta": {
             "timestamp_cet": ts_cet,
-            "source": "tools/run_alerts.py"
+            "source": "tools/run_alerts.py",
+            "config_loaded": CFG_PATH.name
         },
         "mars":   {"alerts": res_mars},
         "venus":  {"alerts": res_venus},
         "family": {"alerts": res_family}
     }
 
-    # Preview in der Konsole (lesbar)
+    # Preview im Terminal
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
-    # Datei zuverlässig schreiben
+    # Output-Datei zuverlässig schreiben
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        if not OUT_PATH.exists():
-            OUT_PATH.write_text("{}", encoding="utf-8")
         with OUT_PATH.open("w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
         sys.stderr.write(f"[ok] alerts written to {OUT_PATH}\n")
     except Exception as e:
         sys.stderr.write(f"[error] cannot write {OUT_PATH}: {e}\n")
         sys.exit(2)
+
 
 if __name__ == "__main__":
     main()
