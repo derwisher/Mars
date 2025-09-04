@@ -50,6 +50,8 @@ jobs:
 
       # ---- Live-Kurse ziehen (Snapshot) ----
       - name: Pull live prices (EUR snapshot)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           python tools/live_data.py
           echo "===== prices_eur_snapshot.csv (Top 10) ====="
@@ -57,6 +59,8 @@ jobs:
 
       # ---- Engine: schreibt docs/alerts.json + data/alerts_out.json ----
       - name: Run Alert Engine (run_alerts.py)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           mkdir -p docs
           python tools/run_alerts.py
