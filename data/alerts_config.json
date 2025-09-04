@@ -4,7 +4,7 @@
       "feeds": ["EZB", "Bloomberg", "Reuters", "Yahoo", "LS-Xetra"],
       "tolerance": 0.002
     },
-    "dual_layer": "USD reference, EUR action (only EUR triggers)",
+    "dual_layer": "USD reference, EUR action (LS/Xetra)",
     "debounce_seconds": 120,
     "volume_min_x": 1.3,
     "volume_spike_x": 1.5,
@@ -19,16 +19,19 @@
       "tickers": ["MSFT", "AMZN", "GOOGL", "TSMC", "MPWR", "SNOW", "DDOG", "ARM", "SHOP", "SE"],
       "trim_drop_5d": -0.12,
       "tp_gain_intraday": 0.12,
-      "momentum_break": { "rule": "close<dma50 AND rs_weak AND vol>1.3x" }
+      "momentum_break": { "rule": "close<dma50 AND rs_weak AND vol_up" }
     },
     "nvda": {
       "mode": "fail_safe",
-      "triggers": { "intraday": -0.12, "close_low5": true }
+      "triggers": {
+        "intraday": -0.12,
+        "close_below_low5": true
+      }
     },
     "satellites": {
       "CRWD": { "add_vs_entry_pct": -0.10 },
-      "SU": { "add_below_eur": 205.00, "stop_orient": 200.00 },
-      "VRT": { "add_below_eur": 100.00, "stop_orient": 95.00 }
+      "SU":   { "add_below_eur": 205.00, "stop_orient": 200.00 },
+      "VRT":  { "add_below_eur": 100.00, "stop_orient": 95.00 }
     },
     "moonshots": {
       "tickers": ["ENVX", "CPNG", "SE"],
@@ -54,12 +57,12 @@
       "allow_trim": false
     },
     "add_on_dips": {
-      "tickers": ["ASML", "LLY", "NVO", "PEP", "VOO", "Brookfield"],
+      "tickers": ["ASML", "LLY", "NVO", "PEP", "VOO", "BEP"],
       "dip_range": [-0.05, -0.03],
       "no_chase": true
     },
     "restpositions": {
-      "tickers": ["NFLX", "PLTR", "ADS", "SRT", "JKS", "ENVX", "DT", "LMT", "WOLF", "Envitec", "MSCIW", "S&P500Dist", "SML600"],
+      "tickers": ["NFLX", "PLTR", "ADS", "SRT", "JKS", "ENVX", "DT", "LMT", "WOLF", "ENVITEC", "MSCIWORLD", "SP500_DIST", "SP600"],
       "no_dca": true,
       "alert_hard_break_only": true
     }
