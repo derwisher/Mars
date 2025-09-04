@@ -1,4 +1,4 @@
-# Alerts workflow
+# Alerts workflow for Mars/Venus (friendly name line must be first meaningful content)
 name: Alerts & Brief (Mars/Venus)
 
 on:
