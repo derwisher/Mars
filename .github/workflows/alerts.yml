@@ -64,18 +64,23 @@ jobs:
           python tools/run_alerts.py
           echo "===== docs/alerts.json (erste 40) ====="
           sed -n '1,40p' docs/alerts.json || true
+          if [ ! -f docs/alerts.json ]; then
+            echo "✖ docs/alerts.json fehlt (MAIN/Engine hat nichts erzeugt)."
+            exit 2
+          fi
 
-      # --- Brief rendern: externer Renderer oder eingebauter Fallback ---
+      # --- Brief rendern: externer Renderer oder robuster Fallback ---
       - name: Render Markdown Brief
+        shell: bash
         run: |
           mkdir -p docs
           if [ -f tools/render_alerts_md.py ]; then
             python tools/render_alerts_md.py
           else
-            python <<'PY'
+            # robust: Renderer in Tempdatei schreiben und ausführen
+            cat > /tmp/render_alerts.py <<'PY'
 import json, pathlib, datetime
 p = pathlib.Path("docs/alerts.json")
-data = {}
 try:
     data = json.loads(p.read_text(encoding="utf-8"))
 except Exception:
@@ -97,6 +102,8 @@ for sec in ("mars","venus","family"):
     lines.append("")
 pathlib.Path("docs/alerts_brief.md").write_text("\n".join(lines), encoding="utf-8")
 PY
+            python /tmp/render_alerts.py
+          fi
 
       # --- Preview ---
       - name: Preview docs/alerts_brief.md
@@ -126,7 +133,7 @@ PY
           RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           python <<'PY'
-import json, pathlib, sys
+import json, pathlib
 has_alerts = False
 try:
     d = json.loads(pathlib.Path("docs/alerts.json").read_text(encoding="utf-8"))
