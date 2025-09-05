@@ -44,7 +44,12 @@ jobs:
       - name: Render Markdown Brief
         run: |
           mkdir -p docs
-          python tools/render_alerts_md.py
+          if [ -f tools/render_alerts_md.py ]; then
+            python tools/render_alerts_md.py
+          else
+            echo "# Alerts Brief — $(date -u)" > docs/alerts_brief.md
+            echo "_(kein Renderer gefunden – Fallback erstellt)_" >> docs/alerts_brief.md
+          fi
           echo "===== docs/alerts_brief.md (erste 80 Zeilen) ====="
           head -n 80 docs/alerts_brief.md || true
 
@@ -61,23 +66,28 @@ jobs:
             git push origin HEAD:main --force
           fi
 
-      # ---- Telegram nur, wenn Alerts vorhanden (Prüfung im Script) ----
+      # ---- Telegram nur, wenn Alerts vorhanden ----
       - name: Telegram Notify
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
           RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          # Skip, falls Secrets fehlen
           if [ -z "${TG_TOKEN}" ] || [ -z "${TG_CHAT}" ]; then
             echo "Secrets für Telegram nicht gesetzt – überspringe."
             exit 0
           fi
 
-          # Prüfen & Nachricht bauen; legt /tmp/tg_msg.txt an, wenn Alerts vorhanden
-          python tools/check_alerts_and_build_tg.py --run-url "${RUN_URL}" || true
+          # prüfen, ob Alerts vorhanden sind
+          if grep -q '"alerts": \[' docs/alerts.json; then
+            {
+              echo "🚨 Alerts-Run (Mars/Venus) – Details:"
+              echo "${RUN_URL}"
+              echo ""
+              echo "--- Erste Zeilen aus docs/alerts.json ---"
+              head -n 10 docs/alerts.json || echo "{}"
+            } > /tmp/tg_msg.txt
 
-          if [ -f /tmp/tg_msg.txt ]; then
             curl -sS "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
               -d "chat_id=${TG_CHAT}" \
               --data-urlencode text@/tmp/tg_msg.txt >/dev/null || true
