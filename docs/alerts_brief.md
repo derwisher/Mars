@@ -1,28 +1,11 @@
-# Alerts Brief – 2025-09-04 17:32 UTC
+# Alerts Brief — 2025-09-05 08:36 UTC
 
-### Mars (TR/LS)
+## mars
 _(keine Alerts)_
 
-### Venus (ING/Xetra)
+## venus
 _(keine Alerts)_
 
-### Family-Level (Risiken/Cluster)
-- **** — **family_risk** —   
-  Score **50** | Confidence **2**  
-  A:   
-  B: 
-- **** — **exposure_guard** —   
-  Score **55** | Confidence **2**  
-  A:   
-  B: 
-- **** — **cluster_nvda** —   
-  Score **60** | Confidence **3**  
-  A:   
-  B: 
-- **** — **corr_ndx** —   
-  Score **55** | Confidence **2**  
-  A:   
-  B: 
-
----
-_Quelle: data/alerts_out.json_
+## family
+- **family_risk** — Score 50 | Confidence 2
+  Family P&L-Wächter aktiv
