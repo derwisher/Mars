@@ -1,8 +1,8 @@
-name: Alerts & Brief (mars/venus)
+name: Alerts & Brief MarsVenus
 
 on:
   schedule:
-    - cron: "6 * * * *"   # stündlich, Minute 06 (UTC)
+    - cron: "6 * * * *"   # stündlich Minute 06 UTC
   workflow_dispatch: {}
 
 permissions:
@@ -21,76 +21,83 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python 3.12
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Check alerts.json presence
+        run: |
+          if [ ! -s docs/alerts.json ]; then
+            echo "ℹ️  docs/alerts.json fehlt oder ist leer – MAIN hat (noch) nicht produziert."
+            echo "     -> ALERTS rendert/benachrichtigt heute nicht."
+            exit 0
           fi
-
-      # ---- Engine (schreibt docs/alerts.json + data/alerts_out.json) ----
-      - name: Run alerts engine
-        run: |
-          mkdir -p docs
-          python tools/run_alerts.py
           echo "===== docs/alerts.json (erste 40 Zeilen) ====="
-          sed -n '1,40p' docs/alerts.json || true
+          head -n 40 docs/alerts.json || true
 
-      # ---- Brief rendern (externes Skript, kein Here-Doc) ----
-      - name: Render Markdown Brief
+      - name: Render Markdown brief
         run: |
           mkdir -p docs
           if [ -f tools/render_alerts_md.py ]; then
             python tools/render_alerts_md.py
           else
-            echo "# Alerts Brief — $(date -u)" > docs/alerts_brief.md
-            echo "_(kein Renderer gefunden – Fallback erstellt)_" >> docs/alerts_brief.md
+            # schlanker Fallback
+            echo "# Alerts Brief — $(date -u +"%Y-%m-%d %H:%M UTC")" > docs/alerts_brief.md
+            echo "_(renderer missing – minimal fallback)_" >> docs/alerts_brief.md
           fi
-          echo "===== docs/alerts_brief.md (erste 80 Zeilen) ====="
-          head -n 80 docs/alerts_brief.md || true
+          echo "===== docs/alerts_brief.md (erste 60 Zeilen) ====="
+          head -n 60 docs/alerts_brief.md || true
 
-      # ---- Commit & Push Brief + JSON (force im CI) ----
-      - name: Commit & Push Brief + JSON
+      - name: Commit & push brief (idempotent)
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/alerts.json docs/alerts_brief.md || true
+          git add docs/alerts_brief.md || true
           if git diff --cached --quiet; then
-            echo "Keine Änderungen zu committen."
+            echo "Keine Änderungen – kein Commit."
           else
-            git commit -m "CI(alerts): update alerts + brief ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            git commit -m "CI(alerts): update brief ($(date -u +'%Y-%m-%dT%H:%MZ'))"
             git push origin HEAD:main --force
           fi
 
-      # ---- Telegram nur, wenn Alerts vorhanden ----
-      - name: Telegram Notify
+      - name: Telegram (only if alerts exist)
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
           RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "${TG_TOKEN}" ] || [ -z "${TG_CHAT}" ]; then
-            echo "Secrets für Telegram nicht gesetzt – überspringe."
+            echo "Tele­gram secrets fehlen – überspringe."
             exit 0
           fi
-
-          # prüfen, ob Alerts vorhanden sind
-          if grep -q '"alerts": \[' docs/alerts.json; then
-            {
-              echo "🚨 Alerts-Run (Mars/Venus) – Details:"
-              echo "${RUN_URL}"
-              echo ""
-              echo "--- Erste Zeilen aus docs/alerts.json ---"
-              head -n 10 docs/alerts.json || echo "{}"
-            } > /tmp/tg_msg.txt
-
+          python - <<'PY'
+import json, pathlib, os, sys
+p = pathlib.Path("docs/alerts.json")
+try:
+    d = json.loads(p.read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+# prüfen ob alerts existieren
+has = any(isinstance(d.get(k), dict) and d[k].get("alerts") for k in ("mars","venus","family"))
+if not has:
+    sys.exit(0)
+msg = ["🚨 Alerts-Run (Mars/Venus)", os.environ.get("RUN_URL",""), "", "--- Erste Zeilen aus alerts.json ---"]
+try:
+    msg.extend(p.read_text(encoding="utf-8").splitlines()[:10])
+except Exception:
+    msg.append("{}")
+pathlib.Path("/tmp/tg_msg.txt").write_text("\n".join(msg), encoding="utf-8")
+print("[OK] wrote /tmp/tg_msg.txt")
+PY
+          if [ -f /tmp/tg_msg.txt ]; then
             curl -sS "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
               -d "chat_id=${TG_CHAT}" \
               --data-urlencode text@/tmp/tg_msg.txt >/dev/null || true
           else
-            echo "Keine Alerts – Telegram wird übersprungen."
+            echo "Keine Alerts – kein Telegram."
           fi
