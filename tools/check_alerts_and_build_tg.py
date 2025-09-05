@@ -1,57 +1,47 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import json, pathlib, argparse, os
 
-"""
-tools/check_alerts_and_build_tg.py
-Prüft, ob in docs/alerts.json Alerts vorhanden sind.
-Falls ja, baut eine Telegram-Message in /tmp/tg_msg.txt
-"""
-
-from __future__ import annotations
-import json
-import argparse
-from pathlib import Path
-
-DOCS = Path("docs")
-ALERTS_JSON = DOCS / "alerts.json"
-TG_MSG = Path("/tmp/tg_msg.txt")
-
-def has_alerts(d: dict) -> bool:
-    for k in ("mars", "venus", "family"):
-        sec = d.get(k)
-        if isinstance(sec, dict) and isinstance(sec.get("alerts"), list):
-            if len(sec["alerts"]) > 0:
-                return True
-    return False
+ALERTS_JSON = pathlib.Path("docs/alerts.json")
+OUT_TXT     = pathlib.Path("/tmp/tg_msg.txt")
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--run-url", default="", help="Link zum Actions-Run")
+    ap.add_argument("--run-url", default="", help="Link zum CI-Run")
     args = ap.parse_args()
 
     try:
         d = json.loads(ALERTS_JSON.read_text(encoding="utf-8"))
     except Exception:
-        return  # keine Datei / ungültig -> kein TG
+        d = {}
 
-    if not has_alerts(d):
-        return
+    found = False
+    for k in ("mars","venus","family"):
+        sec = d.get(k)
+        if isinstance(sec, dict) and sec.get("alerts"):
+            if len(sec["alerts"]) > 0:
+                found = True
+                break
 
-    # Message aufbauen
+    if not found:
+        return 0  # kein /tmp/tg_msg.txt => Step sendet nichts
+
     lines = []
-    lines.append("🚨 Alerts-Run (Mars/Venus) – Details:")
+    lines.append("🚨 Alerts-Run (Mars/Venus)")
     if args.run_url:
         lines.append(args.run_url)
     lines.append("")
     lines.append("--- Erste Zeilen aus docs/alerts.json ---")
 
+    # präge Kurzvorschau
     try:
-        preview = "\n".join(ALERTS_JSON.read_text(encoding="utf-8").splitlines()[:10])
+        preview = ALERTS_JSON.read_text(encoding="utf-8").splitlines()[:10]
+        lines.extend(preview)
     except Exception:
-        preview = "{}"
-    lines.append(preview)
+        pass
 
-    TG_MSG.write_text("\n".join(lines), encoding="utf-8")
+    OUT_TXT.write_text("\n".join(lines), encoding="utf-8")
+    return 0
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
