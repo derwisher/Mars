@@ -2,7 +2,7 @@ name: Alerts & Brief (Mars/Venus)
 
 on:
   schedule:
-    - cron: "6 * * * *"    # stündlich Minute 06 (UTC)
+    - cron: "6 * * * *"     # stündlich Minute 06 (UTC)
   workflow_dispatch: {}
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      # ---- DST-Gate (07/12/17 Berlin) ----
+      # ---- Zeit-Fenster: nur 07/12/17 Europe/Berlin ----
       - name: Time gate (Europe/Berlin → 07/12/17 only)
         id: timegate
         run: |
@@ -46,32 +46,49 @@ jobs:
 
       - name: Stop if not scheduled Berlin hour
         if: steps.timegate.outputs.continue == 'false'
-        run: echo "Skipping alerts brief (not 07/12/17 Berlin)." && exit 0
+        run: echo "Skipping alerts (not 07/12/17 Berlin time)." && exit 0
 
-      # ---- Engine laufen lassen ----
+      # ---- Live-Kurse ziehen (EUR Snapshot) ----
+      - name: Pull live prices (EUR snapshot)
+        run: |
+          python tools/live_data.py
+          echo "===== prices_eur_snapshot.csv (Top 10) ====="
+          sed -n '1,10p' data/prices_eur_snapshot.csv || true
+
+      # ---- Alert-Engine → docs/alerts.json + data/alerts_out.json ----
       - name: Run Alert Engine
         run: |
+          mkdir -p docs
           python tools/run_alerts.py
+          if [ ! -f docs/alerts.json ]; then
+            echo "✖ docs/alerts.json fehlt – Engine hat nichts geschrieben."
+            exit 2
+          fi
           echo "===== docs/alerts.json (erste 40) ====="
           sed -n '1,40p' docs/alerts.json || true
 
-      # ---- Brief rendern ----
+      # ---- Brief rendern (externes Skript ODER Fallback-HereDoc) ----
       - name: Render Markdown Brief
+        shell: bash
         run: |
           mkdir -p docs
           if [ -f tools/render_alerts_md.py ]; then
             python tools/render_alerts_md.py
           else
-            python - <<'PY'
+            # Fallback: Renderer direkt per HereDoc als temporäre Datei
+            cat > /tmp/render_alerts.py <<'PY'
 import json, pathlib, datetime
+
 p = pathlib.Path("docs/alerts.json")
 data = {}
 try:
     data = json.loads(p.read_text(encoding="utf-8"))
 except Exception:
     data = {}
+
 ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 lines = [f"# Alerts Brief — {ts}", ""]
+
 for sec in ("mars","venus","family"):
     lines.append(f"## {sec}")
     alerts = (data.get(sec) or {}).get("alerts", [])
@@ -82,18 +99,21 @@ for sec in ("mars","venus","family"):
         topic = a.get("ticker") or a.get("topic") or "?"
         sc = a.get("score","?")
         cf = a.get("confidence","?")
-        what = a.get("what","").strip()
+        what = (a.get("what") or "").strip()
         lines.append(f"- **{topic}** — Score {sc} | Confidence {cf}\n  {what}")
     lines.append("")
+
 pathlib.Path("docs/alerts_brief.md").write_text("\n".join(lines), encoding="utf-8")
 PY
+            python /tmp/render_alerts.py
+          fi
 
       - name: Preview docs/alerts_brief.md
         run: |
           echo "===== docs/alerts_brief.md (erste 80) ====="
           head -n 80 docs/alerts_brief.md || true
 
-      # ---- Commit & Push Brief ----
+      # ---- Commit & Push Brief + JSON (force im CI, vermeidet Rebase-Fails) ----
       - name: Commit & Push Brief + JSON
         run: |
           git config user.name  "github-actions[bot]"
@@ -102,20 +122,21 @@ PY
           if git diff --cached --quiet; then
             echo "Keine Änderungen zu committen."
           else
-            git commit -m "CI(alerts): update alerts_brief.md ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            git commit -m "CI(alerts): update alerts & brief ($(date -u +'%Y-%m-%dT%H:%MZ'))"
             git push origin HEAD:main --force
           fi
 
-      # ---- Telegram nur bei Alerts ----
+      # ---- Telegram nur senden, wenn wirklich Alerts vorhanden ----
       - name: Telegram Notify (nur wenn Alerts vorhanden)
         if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
           RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
         run: |
           python - <<'PY'
-import json, pathlib
+import json, pathlib, sys
 p = pathlib.Path("docs/alerts.json")
 has = False
 try:
@@ -129,9 +150,8 @@ except Exception:
     pass
 open("/tmp/has.flag","w").write("1" if has else "0")
 PY
-
           if [ "$(cat /tmp/has.flag)" != "1" ]; then
-            echo "❕ Keine Alerts vorhanden – Telegram wird übersprungen."
+            echo "ℹ️  Keine Alerts vorhanden – Telegram wird übersprungen."
             exit 0
           fi
           {
