@@ -1,28 +1,38 @@
 name: Auto-Extend Universe
 on:
   schedule:
-    - cron: "15 2 * * *"     # täglich um 02:15 UTC (anpassen wie gewünscht)
+    - cron: "12 5 * * *"     # täglich 05:12 UTC
   workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  extend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install deps
-        run: pip install -r requirements.txt
-      - name: Rebuild extended_universe.txt
-        run: python tools/auto_extend.py
-      - name: Commit updated list
+        with: { python-version: "3.12" }
+
+      - name: Run auto-extend
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/extended_universe.txt || true
-          git commit -m "auto-extend universe" || echo "no changes"
-          git push
+          python tools/auto_extend_universe.py
+          echo "===== universe_core.txt (Top 30) ====="
+          sed -n '1,30p' data/universe_core.txt || true
+          echo "===== universe_watch.txt (Top 30) ====="
+          sed -n '1,30p' data/universe_watch.txt || true
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/universe_core.txt data/universe_watch.txt || true
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "CI(auto-extend): refresh universe ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            git push origin HEAD:main --force
+          fi
