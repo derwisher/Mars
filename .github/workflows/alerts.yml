@@ -1,8 +1,8 @@
-name: Alerts & Brief MarsVenus
+name: Alerts & Brief (mars/venus)
 
 on:
   schedule:
-    - cron: "6 * * * *"    # stündlich Minute 06 (UTC)
+    - cron: "6 * * * *"   # stündlich, Minute 06 (UTC)
   workflow_dispatch: {}
 
 permissions:
@@ -32,48 +32,23 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      # ---- DST-Gate (nur 07/12/17 Europe/Berlin) ----
-      - name: Time gate (Europe/Berlin → 07/12/17 only)
-        id: timegate
+      # ---- Engine (schreibt docs/alerts.json + data/alerts_out.json) ----
+      - name: Run alerts engine
         run: |
-          TZ=Europe/Berlin
-          HOUR=$(TZ=$TZ date +%H)
-          if [ "$HOUR" = "07" ] || [ "$HOUR" = "12" ] || [ "$HOUR" = "17" ]; then
-            echo "continue=true" >> $GITHUB_OUTPUT
-          else
-            echo "continue=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Stop if not scheduled Berlin hour
-        if: steps.timegate.outputs.continue == 'false'
-        run: echo "Skipping alerts brief (not 07/12/17 Berlin)." && exit 0
-
-      # ---- Live-Kurse ziehen (Snapshot) ----
-      - name: Pull live prices (EUR snapshot)
-        run: |
-          python tools/live_data.py
-          echo "===== prices_eur_snapshot.csv (Top 10) ====="
-          sed -n '1,10p' data/prices_eur_snapshot.csv || true
-
-      # ---- Engine laufen lassen (schreibt alerts.json/out.json) ----
-      - name: Run Alert Engine
-        run: |
+          mkdir -p docs
           python tools/run_alerts.py
-          echo "===== docs/alerts.json (erste 40) ====="
+          echo "===== docs/alerts.json (erste 40 Zeilen) ====="
           sed -n '1,40p' docs/alerts.json || true
 
-      # ---- Brief rendern ----
+      # ---- Brief rendern (externes Skript, kein Here-Doc) ----
       - name: Render Markdown Brief
         run: |
           mkdir -p docs
           python tools/render_alerts_md.py
-
-      - name: Preview docs/alerts_brief.md
-        run: |
-          echo "===== docs/alerts_brief.md (erste 80) ====="
+          echo "===== docs/alerts_brief.md (erste 80 Zeilen) ====="
           head -n 80 docs/alerts_brief.md || true
 
-      # ---- Commit & Push Brief + JSON ----
+      # ---- Commit & Push Brief + JSON (force im CI) ----
       - name: Commit & Push Brief + JSON
         run: |
           git config user.name  "github-actions[bot]"
@@ -86,19 +61,26 @@ jobs:
             git push origin HEAD:main --force
           fi
 
-      # ---- Telegram Notify (nur wenn Alerts vorhanden) ----
+      # ---- Telegram nur, wenn Alerts vorhanden (Prüfung im Script) ----
       - name: Telegram Notify
-        if: ${{ secrets.TELEGRAM_BOT_TOKEN && secrets.TELEGRAM_CHAT_ID }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
           RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          python tools/check_alerts_and_build_tg.py --run-url "$RUN_URL"
+          # Skip, falls Secrets fehlen
+          if [ -z "${TG_TOKEN}" ] || [ -z "${TG_CHAT}" ]; then
+            echo "Secrets für Telegram nicht gesetzt – überspringe."
+            exit 0
+          fi
+
+          # Prüfen & Nachricht bauen; legt /tmp/tg_msg.txt an, wenn Alerts vorhanden
+          python tools/check_alerts_and_build_tg.py --run-url "${RUN_URL}" || true
+
           if [ -f /tmp/tg_msg.txt ]; then
             curl -sS "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
               -d "chat_id=${TG_CHAT}" \
               --data-urlencode text@/tmp/tg_msg.txt >/dev/null || true
           else
-            echo "❕ Keine Alerts – Telegram übersprungen."
+            echo "Keine Alerts – Telegram wird übersprungen."
           fi
