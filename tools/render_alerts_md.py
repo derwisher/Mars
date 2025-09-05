@@ -1,34 +1,52 @@
 #!/usr/bin/env python3
-# tools/render_alerts_md.py
-import json, pathlib, datetime
+# -*- coding: utf-8 -*-
 
-ALERTS_JSON = pathlib.Path("docs/alerts.json")
-BRIEF_MD    = pathlib.Path("docs/alerts_brief.md")
+"""
+tools/render_alerts_md.py
+Erzeugt aus docs/alerts.json einen kurzen Markdown-Brief docs/alerts_brief.md
+"""
 
-def main():
+from __future__ import annotations
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+
+DOCS = Path("docs")
+ALERTS_JSON = DOCS / "alerts.json"
+BRIEF_MD = DOCS / "alerts_brief.md"
+
+def load_alerts() -> dict:
     try:
-        data = json.loads(ALERTS_JSON.read_text(encoding="utf-8"))
+        return json.loads(ALERTS_JSON.read_text(encoding="utf-8"))
     except Exception:
-        data = {}
+        return {}
 
-    ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-    lines = [f"# Alerts Brief — {ts}", ""]
+def now_utc() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
+def render_brief(data: dict) -> str:
+    lines = [f"# Alerts Brief — {now_utc()}", ""]
     for sec in ("mars", "venus", "family"):
         lines.append(f"## {sec}")
         alerts = (data.get(sec) or {}).get("alerts", [])
         if not alerts:
-            lines.append("_(keine Alerts)_\n")
+            lines.append("_(keine Alerts)_")
+            lines.append("")
             continue
         for a in alerts[:10]:
             topic = a.get("ticker") or a.get("topic") or "?"
-            sc    = a.get("score", "?")
-            cf    = a.get("confidence", "?")
-            what  = (a.get("what") or "").strip()
+            sc = a.get("score", "?")
+            cf = a.get("confidence", "?")
+            what = (a.get("what") or "").strip()
             lines.append(f"- **{topic}** — Score {sc} | Confidence {cf}\n  {what}")
         lines.append("")
+    return "\n".join(lines)
 
-    BRIEF_MD.write_text("\n".join(lines), encoding="utf-8")
+def main():
+    DOCS.mkdir(parents=True, exist_ok=True)
+    data = load_alerts()
+    BRIEF_MD.write_text(render_brief(data), encoding="utf-8")
+    print(f"[OK] wrote {BRIEF_MD}")
 
 if __name__ == "__main__":
     main()
