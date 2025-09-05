@@ -1,4 +1,4 @@
-name: Alerts & Brief (mars/venus)
+name: Alerts & Brief MarsVenus
 
 on:
   schedule:
@@ -88,7 +88,7 @@ jobs:
 
       # ---- Telegram Notify (nur wenn Alerts vorhanden) ----
       - name: Telegram Notify
-        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN && secrets.TELEGRAM_CHAT_ID }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
