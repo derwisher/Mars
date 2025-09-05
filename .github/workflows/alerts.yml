@@ -2,7 +2,7 @@ name: Alerts & Brief (mars/venus)
 
 on:
   schedule:
-    - cron: "6 * * * *"   # stündlich Minute 06 (UTC)
+    - cron: "6 * * * *"      # stündlich Minute 06 (UTC)
   workflow_dispatch: {}
 
 permissions:
@@ -16,7 +16,6 @@ jobs:
   alerts:
     runs-on: ubuntu-latest
     steps:
-      # --- Checkout & Python ---
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -28,71 +27,75 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
+        shell: bash
         run: |
+          set -euxo pipefail
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
 
-      # --- Zeit-Gate: nur 07/12/17 (Berlin) ---
-      - name: Time gate (Europe/Berlin → 07/12/17 only)
-        id: timegate
+      # ---- Diagnose: Umgebung und Dateien sichtbar machen ----
+      - name: Diagnostics (workspace & versions)
+        shell: bash
         run: |
-          TZ=Europe/Berlin
-          HOUR=$(TZ=$TZ date +%H)
-          if [ "$HOUR" = "07" ] || [ "$HOUR" = "12" ] || [ "$HOUR" = "17" ]; then
-            echo "continue=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "continue=false" >> "$GITHUB_OUTPUT"
-          fi
+          set -euxo pipefail
+          echo "Workspace: $GITHUB_WORKSPACE"
+          python --version
+          pip list || true
+          echo "---- root ----"; ls -la
+          echo "---- tools ----"; ls -la tools || true
+          echo "---- data ----"; ls -la data || true
 
-      - name: Stop if not scheduled Berlin hour
-        if: steps.timegate.outputs.continue == 'false'
-        run: echo "Skipping alerts brief (not 07/12/17 Berlin)." && exit 0
-
-      # --- Live-Preise (EUR) ziehen ---
-      - name: Pull live prices (EUR snapshot)
+      # ---- Optional: EUR-Snapshot ziehen (nur wenn live_data.py vorhanden) ----
+      - name: (Optional) Pull live prices (EUR snapshot)
+        if: ${{ hashFiles('tools/live_data.py') != '' }}
+        shell: bash
         run: |
-          set -x
-          python tools/live_data.py
-          echo "===== data/prices_eur_snapshot.csv (Top 10) ====="
-          head -n 10 data/prices_eur_snapshot.csv || true
+          set -euxo pipefail
+          python tools/live_data.py || true
+          echo "---- prices_eur_snapshot.csv (Top 10) ----"
+          sed -n '1,10p' data/prices_eur_snapshot.csv || true
 
-      # --- Alert-Engine (debug) ---
-      - name: Run Alert Engine (debug)
+      # ---- Engine ausführen, Output prüfen, JSON anreißen ----
+      - name: Run Alert Engine (verbose)
+        shell: bash
+        env:
+          PYTHONUNBUFFERED: "1"
         run: |
-          set -x
+          set -euxo pipefail
           mkdir -p docs
           python tools/run_alerts.py
-          echo "===== docs/alerts.json (erste 40) ====="
-          head -n 40 docs/alerts.json || true
-
-      - name: Ensure docs/alerts.json exists
-        run: |
-          if [ ! -f docs/alerts.json ]; then
-            echo "❌ docs/alerts.json fehlt – Engine hat nichts erzeugt."
+          if [ ! -s docs/alerts.json ]; then
+            echo "❌ docs/alerts.json fehlt oder ist leer – Engine hat nichts geliefert."
             exit 2
           fi
+          echo "✅ docs/alerts.json vorhanden. Erste 80 Zeilen:"
+          sed -n '1,80p' docs/alerts.json || true
 
-      # --- Brief rendern ---
+      # ---- Brief rendern (externe Datei, kein Here-Doc) ----
       - name: Render Markdown Brief
+        shell: bash
         run: |
-          set -x
+          set -euxo pipefail
           mkdir -p docs
+          # Falls du einen festen Renderer hast, kannst du diese Zeile verwenden:
           if [ -f tools/render_alerts_md.py ]; then
             python tools/render_alerts_md.py
           else
-            python - <<'PY'
+            # Fallback: Temporäres Renderer-Skript erzeugen
+            cat > /tmp/render_alerts_md.py << 'PY'
 import json, pathlib, datetime
 p = pathlib.Path("docs/alerts.json")
+data = {}
 try:
-    d = json.loads(p.read_text(encoding="utf-8"))
+    data = json.loads(p.read_text(encoding="utf-8"))
 except Exception:
-    d = {}
+    data = {}
 ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 lines = [f"# Alerts Brief — {ts}", ""]
 for sec in ("mars","venus","family"):
     lines.append(f"## {sec}")
-    alerts = (d.get(sec) or {}).get("alerts", [])
+    alerts = (data.get(sec) or {}).get("alerts", [])
     if not alerts:
         lines.append("_(keine Alerts)_\n")
         continue
@@ -105,17 +108,26 @@ for sec in ("mars","venus","family"):
     lines.append("")
 pathlib.Path("docs/alerts_brief.md").write_text("\n".join(lines), encoding="utf-8")
 PY
+            python /tmp/render_alerts_md.py
+          fi
+          # Verifizieren
+          if [ ! -s docs/alerts_brief.md ]; then
+            echo "❌ docs/alerts_brief.md wurde nicht erzeugt."
+            exit 3
           fi
 
       - name: Preview docs/alerts_brief.md
+        shell: bash
         run: |
+          set -euxo pipefail
           echo "===== docs/alerts_brief.md (erste 80) ====="
           head -n 80 docs/alerts_brief.md || true
 
-      # --- Commit & Push (force im CI) ---
+      # ---- Commit & Push (force im CI) ----
       - name: Commit & Push Brief + JSON
+        shell: bash
         run: |
-          set -x
+          set -euxo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/alerts.json docs/alerts_brief.md || true
@@ -126,19 +138,21 @@ PY
             git push origin HEAD:main --force
           fi
 
-      # --- Telegram nur senden, wenn Alerts vorhanden ---
+      # ---- Telegram Notify (nur wenn Alerts vorhanden) ----
       - name: Telegram Notify
         if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
+        shell: bash
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
           RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          set -x
-          python - <<'PY'
-import json, pathlib
-p = pathlib.Path("docs/alerts.json")
+          set -euxo pipefail
+          # kleines Prüfsystem als Temp-Datei
+          cat > /tmp/check_and_build_tg.py << 'PY'
+import json, pathlib, sys, os
 has = False
+p = pathlib.Path("docs/alerts.json")
 try:
     d = json.loads(p.read_text(encoding="utf-8"))
     for k in ("mars","venus","family"):
@@ -147,21 +161,26 @@ try:
                 has = True
                 break
 except Exception:
-    has = False
-open("/tmp/has.flag","w").write("1" if has else "0")
+    pass
+if not has:
+    sys.exit(10)
+msg = []
+msg.append("🚨 Alerts-Run (Mars/Venus)")
+msg.append(os.environ.get("RUN_URL",""))
+msg.append("")
+msg.append("--- Erste Zeilen aus docs/alerts.json ---")
+try:
+    head = "".join(pathlib.Path("docs/alerts.json").read_text(encoding="utf-8").splitlines(True)[:10])
+    msg.append(head)
+except Exception:
+    msg.append("{}")
+pathlib.Path("/tmp/tg_msg.txt").write_text("\n".join(msg), encoding="utf-8")
 PY
-          if [ "$(cat /tmp/has.flag)" != "1" ]; then
+          if python /tmp/check_and_build_tg.py; then
+            curl -sS "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+              -d "chat_id=${TG_CHAT}" \
+              --data-urlencode text@/tmp/tg_msg.txt \
+              >/dev/null || true
+          else
             echo "❕ Keine Alerts vorhanden – Telegram wird übersprungen."
-            exit 0
           fi
-          {
-            echo "🚨 Alerts-Run (mars/venus)"
-            echo "$RUN_URL"
-            echo ""
-            echo "--- Erste Zeilen aus docs/alerts.json ---"
-            head -n 10 docs/alerts.json || echo "{}"
-          } > /tmp/tg_msg.txt
-          curl -sS "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
-            -d "chat_id=${TG_CHAT}" \
-            --data-urlencode text@/tmp/tg_msg.txt \
-            >/dev/null || true
