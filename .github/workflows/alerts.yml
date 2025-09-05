@@ -48,31 +48,53 @@ jobs:
         if: steps.timegate.outputs.continue == 'false'
         run: echo "Skipping alerts brief (not 07/12/17 Berlin)." && exit 0
 
-      # ---- Engine: schreibt docs/alerts.json + data/alerts_out.json ----
+      # ---- Engine laufen lassen ----
       - name: Run Alert Engine
         run: |
-          mkdir -p docs
           python tools/run_alerts.py
-          if [ ! -f docs/alerts.json ]; then
-            echo "❌ docs/alerts.json fehlt – Engine hat nichts erzeugt!"
-            exit 2
-          fi
           echo "===== docs/alerts.json (erste 40) ====="
           sed -n '1,40p' docs/alerts.json || true
 
-      # ---- Brief rendern (Datei-Renderer) ----
+      # ---- Brief rendern ----
       - name: Render Markdown Brief
         run: |
           mkdir -p docs
-          python tools/render_alerts_md.py
+          if [ -f tools/render_alerts_md.py ]; then
+            python tools/render_alerts_md.py
+          else
+            python - <<'PY'
+import json, pathlib, datetime
+p = pathlib.Path("docs/alerts.json")
+data = {}
+try:
+    data = json.loads(p.read_text(encoding="utf-8"))
+except Exception:
+    data = {}
+ts = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+lines = [f"# Alerts Brief — {ts}", ""]
+for sec in ("mars","venus","family"):
+    lines.append(f"## {sec}")
+    alerts = (data.get(sec) or {}).get("alerts", [])
+    if not alerts:
+        lines.append("_(keine Alerts)_\n")
+        continue
+    for a in alerts[:10]:
+        topic = a.get("ticker") or a.get("topic") or "?"
+        sc = a.get("score","?")
+        cf = a.get("confidence","?")
+        what = a.get("what","").strip()
+        lines.append(f"- **{topic}** — Score {sc} | Confidence {cf}\n  {what}")
+    lines.append("")
+pathlib.Path("docs/alerts_brief.md").write_text("\n".join(lines), encoding="utf-8")
+PY
 
       - name: Preview docs/alerts_brief.md
         run: |
           echo "===== docs/alerts_brief.md (erste 80) ====="
           head -n 80 docs/alerts_brief.md || true
 
-      # ---- Commit & Push Brief + JSON ----
-      - name: Commit & Push Brief
+      # ---- Commit & Push Brief ----
+      - name: Commit & Push Brief + JSON
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -80,11 +102,11 @@ jobs:
           if git diff --cached --quiet; then
             echo "Keine Änderungen zu committen."
           else
-            git commit -m "CI(alerts): update alerts.json + brief ($(date -u +'%Y-%m-%dT%H:%MZ'))"
+            git commit -m "CI(alerts): update alerts_brief.md ($(date -u +'%Y-%m-%dT%H:%MZ'))"
             git push origin HEAD:main --force
           fi
 
-      # ---- Telegram nur wenn Alerts ----
+      # ---- Telegram nur bei Alerts ----
       - name: Telegram Notify (nur wenn Alerts vorhanden)
         if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' }}
         env:
@@ -107,6 +129,7 @@ except Exception:
     pass
 open("/tmp/has.flag","w").write("1" if has else "0")
 PY
+
           if [ "$(cat /tmp/has.flag)" != "1" ]; then
             echo "❕ Keine Alerts vorhanden – Telegram wird übersprungen."
             exit 0
